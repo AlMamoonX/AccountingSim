@@ -9,7 +9,8 @@ import { PartBadge } from "@/components/ui/bits";
 type Up = (fn: (s: ExerciseSpec) => void) => void;
 
 /** Structured editor. With onChange undefined it is read-only (published exercise). */
-export function SpecEditor({ spec, onChange }: { spec: ExerciseSpec; onChange?: (s: ExerciseSpec) => void }) {
+/** booksOnly: hide business, amounts, exercise-wide checks and JSON (used for a simulation's monthly books). */
+export function SpecEditor({ spec, onChange, booksOnly }: { spec: ExerciseSpec; onChange?: (s: ExerciseSpec) => void; booksOnly?: boolean }) {
   const ro = !onChange;
   const up: Up = (fn) => {
     if (!onChange) return;
@@ -35,6 +36,7 @@ export function SpecEditor({ spec, onChange }: { spec: ExerciseSpec; onChange?: 
   return (
     <fieldset disabled={ro} className="stack" style={{ border: 0, padding: 0, margin: 0 }}>
       {ro && <p className="alert info">Published exercises are locked. Make a copy to change it.</p>}
+      {!booksOnly && (<>
       <section className="card stack-sm">
         <h2>Business and story</h2>
         <div className="grid-2">
@@ -98,6 +100,7 @@ export function SpecEditor({ spec, onChange }: { spec: ExerciseSpec; onChange?: 
         </div>
         <Add onClick={() => up((s) => void s.params.push({ name: `amount${s.params.length + 1}`, label: "", value: 100 }))}>+ Add amount</Add>
       </section>
+      </>)}
 
       <section className="card stack-sm">
         <h2>Transactions</h2>
@@ -148,14 +151,15 @@ export function SpecEditor({ spec, onChange }: { spec: ExerciseSpec; onChange?: 
         </div>
       )}
 
-      <section className="card stack-sm">
+      {!booksOnly && (<section className="card stack-sm">
         <h2>Exercise-wide checks</h2>
         <Checks checks={spec.checks} onChange={(fn) => up((s) => fn(s.checks))} />
         <Area label="Notes for you (not shown to students)" value={spec.teacherNotes ?? ""} onChange={(v) => up((s) => void (s.teacherNotes = v || undefined))} />
       </section>
 
+      )}
       <FormulaHelp />
-      {!ro && <JsonEditor spec={spec} onApply={onChange!} />}
+      {!ro && !booksOnly && <JsonEditor spec={spec} onApply={onChange!} />}
     </fieldset>
   );
 }

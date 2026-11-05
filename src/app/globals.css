@@ -213,3 +213,15 @@ table.sheet tr.totals td{border-top:3px solid var(--ink);padding-top:8px}
   .big-num{font-size:44px}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:1ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}}
+
+/* ---------- company simulation ---------- */
+.decision{background:var(--field);border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.slider{flex:1;accent-color:var(--purple);height:44px;min-width:0}
+.event-card{background:var(--pink);border:3px solid var(--ink);border-radius:28px;box-shadow:0 8px 0 var(--ink);padding:22px 24px;transform:rotate(-1.2deg);animation:eventin 520ms var(--spring) both}
+@keyframes eventin{from{opacity:0;transform:rotate(-8deg) scale(.85)}}
+.stepper{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.stepper li{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;background:var(--track);font-weight:700;color:var(--muted)}
+.stepper li span{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff}
+.stepper li.on{background:var(--ink);color:var(--bg)}
+.stepper li.on span{background:var(--bg);color:var(--ink)}
+.stepper li.done{background:var(--t-teal);color:var(--tx-teal)}

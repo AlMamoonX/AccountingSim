@@ -8,6 +8,7 @@ const DOCTOR = [
   { href: "/t/classes", label: "Classes", match: (p: string) => p.startsWith("/t/classes") },
   { href: "/t/lectures", label: "Lectures", match: (p: string) => p.startsWith("/t/lectures") },
   { href: "/t/exercises", label: "Exercises", match: (p: string) => p.startsWith("/t/exercises") },
+  { href: "/t/sims", label: "Simulations", match: (p: string) => p.startsWith("/t/sims") || p.startsWith("/t/sim-runs") },
 ];
 const STUDENT = [{ href: "/s", label: "My assignments", match: (p: string) => p.startsWith("/s") }];
 
