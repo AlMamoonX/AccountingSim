@@ -6,9 +6,13 @@ Last updated: 2026-11-05. Repo: https://github.com/AlMamoonX/AccountingSim (bran
 
 The main app (AI exercises, 15 Karak Pop pages, sign-in, marking, Excel, Docker) is **done and working**. See [README.md](README.md) and [pages.md](pages.md).
 
-The **company simulation** feature is half built. The engine, sample, tests, database tables and AI generation are done. The pages and server actions are **not built yet**, so nothing about sims shows in the app yet.
+The **company simulation** is now **built and partly tested in the browser**:
 
-`npm test`: 28 tests pass (14 exercise engine + 14 sim engine). `npx tsc --noEmit` is clean.
+- Doctor: Simulations tab, add the sample sim, review with Overview / Test play / Edit, give to a class, control room. Verified.
+- Student: name company → Decide → Record → Results (marks + statements + feedback + leaderboard). Verified for one month.
+- Not yet verified: "Open next month" with auto-play, the end-of-sim final page, the Excel export, a real DeepSeek sim generation.
+
+`npm test`: 28 tests pass. `npx tsc --noEmit` is clean.
 
 ## What the sim is (decided with the user)
 
@@ -44,7 +48,7 @@ Full plan: the "Company Simulation" plan in the Claude plans folder; summary bel
 - `src/lib/ai/generate.ts`: `runWithRepair<T>(messages, kind, schema, check, id, what)` is now generic; `courseContextFor(query, useLibrary)` is exported.
 - `src/lib/ai/simPrompt.ts` (`SIM_PROMPT`, includes the sample as the example) and `src/lib/ai/simGenerate.ts` (`generateSim`, `reviseSim`, `simProblems`, `simWarnings`). Not yet run against real DeepSeek.
 
-## To do next (in order)
+## Original build list (steps 1–4 are now DONE: see "Remaining" at the end)
 
 1. **`src/lib/sim/data.ts`**
    - `loadSim(id)`.
@@ -88,3 +92,10 @@ Full plan: the "Company Simulation" plan in the Claude plans folder; summary bel
 - The shell safety check blocks heredocs containing `find … -delete`: write such files with the editor instead.
 - The GitHub connector in Claude is broken (no token). Pushing works through Git Credential Manager (`git push`).
 - Teacher accounts share all classes/exercises. Teacher emails come from `TEACHER_EMAILS`; students are `@student.gutech.edu.om`.
+
+## Remaining (as of the last push)
+
+- Browser-test: the doctor opens February and March (a skipped month must show as auto-played with 0 book marks), "End the simulation now" → the student final page, the Excel download.
+- One real DeepSeek run on `/t/sims/new` ("a bakery in Nizwa, 4 months, inventory and a loan"); it must pass `analyzeSim`.
+- Update `pages.md` + `README.md` with the Simulations pages. The final results are shown on `/s/sims/[runId]` once the run has ended; there's no separate `/final` page.
+- `npm run build` (stop the dev server first), commit, push.
