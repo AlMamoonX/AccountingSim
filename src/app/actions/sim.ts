@@ -6,10 +6,11 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { requireStudent, requireTeacher } from "@/lib/auth";
 import { isUuid } from "@/lib/data";
-import { SimSpecSchema } from "@/lib/sim/schema";
+import { SimMonthWorkSchema, SimSpecSchema, type SimMonthWork } from "@/lib/sim/schema";
+import { monthWorkIssue, withMonthWork } from "@/lib/sim/work";
 import { analyzeSim, runCompany, monthExercise, validateDecisions } from "@/lib/sim/engine";
 import { autoFill, companyResults, loadRun, loadSim, monthRows, runState } from "@/lib/sim/data";
-import { generateSim, reviseSim, simWarnings, type SimRequest } from "@/lib/ai/simGenerate";
+import { generateMonthWork, generateSim, reviseSim, simWarnings, type SimRequest } from "@/lib/ai/simGenerate";
 import { grade, type StudentAnswers } from "@/lib/spec/engine";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -179,6 +180,50 @@ export async function endRun(runId: string) {
   revalidatePath(`/t/sim-runs/${runId}`);
 }
 
+export async function draftMonthWork(runId: string, month: number, instruction: string): Promise<Result<{ work: SimMonthWork }>> {
+  await requireTeacher();
+  const data = await loadRun(runId);
+  if (!data) return { ok: false, error: "Simulation not found." };
+  const issue = monthWorkIssue(data.run, data.spec.months, month);
+  if (issue) return { ok: false, error: issue };
+  if (!instruction.trim()) return { ok: false, error: "Describe what students should do that month." };
+  try {
+    const work = await generateMonthWork(data.spec, month, instruction.trim().slice(0, 4000), runId);
+    return { ok: true, work };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function applyMonthWork(runId: string, raw: unknown): Promise<Result> {
+  await requireTeacher();
+  const parsed = SimMonthWorkSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "The month plan is invalid. Generate a new draft." };
+  const data = await loadRun(runId);
+  if (!data) return { ok: false, error: "Simulation not found." };
+  const db = await getDb();
+  // Serialize against opening the month and other teachers saving plans.
+  const result = await db.transaction(async (tx): Promise<Result> => {
+    const [current] = await tx.select().from(schema.simRuns).where(eq(schema.simRuns.id, runId)).for("update");
+    if (!current) return { ok: false, error: "Simulation not found." };
+    const issue = monthWorkIssue(current, data.spec.months, parsed.data.month);
+    if (issue) return { ok: false, error: issue };
+    const plans = SimMonthWorkSchema.array().parse(current.monthWork);
+    const base = withMonthWork(data.spec, plans);
+    const candidate = withMonthWork(base, [parsed.data]);
+    const analysis = analyzeSim(candidate);
+    if (!analysis.ok) return { ok: false, error: `This plan cannot be applied: ${[...analysis.errors, ...analysis.failed].slice(0, 3).join("; ")}` };
+    const next = [...plans.filter((w) => w.month !== parsed.data.month), parsed.data].sort((a, b) => a.month - b.month);
+    await tx.update(schema.simRuns).set({ monthWork: next }).where(eq(schema.simRuns.id, runId));
+    return { ok: true };
+  });
+  if (result.ok) {
+    revalidatePath(`/t/sim-runs/${runId}`);
+    revalidatePath(`/s/sims/${runId}`);
+  }
+  return result;
+}
+
 /* ---------------- student ---------------- */
 
 async function studentRun(runId: string) {
@@ -196,10 +241,13 @@ async function studentRun(runId: string) {
 }
 
 export async function startCompany(runId: string, fd: FormData): Promise<void> {
-  const { me, run } = await studentRun(runId);
+  const { me, run, spec } = await studentRun(runId);
+  if (runState(run, spec).ended) return;
   const name = clean(fd.get("companyName"), 40) || "My company";
   const db = await getDb();
   await db.insert(schema.simPlayers).values({ runId: run.id, studentId: me.id, companyName: name }).onConflictDoNothing();
+  // Late joiners start in the currently open month, with earlier months settled.
+  if (run.openedMonth > 1) await autoFill(run, spec, run.openedMonth - 1);
   revalidatePath(`/s/sims/${runId}`);
 }
 

@@ -1,101 +1,65 @@
-# Handoff: Company Simulation ("game sim") — work in progress
+# AccountingSim handoff
 
-Last updated: 2026-11-05. Repo: https://github.com/AlMamoonX/AccountingSim (branch `main`).
+Updated 2026-11-05 by Codex. Repository: https://github.com/AlMamoonX/AccountingSim, branch `main`. Local checkout: `C:\Projects\ACCsim`.
 
-## Where things stand
+## Current work and owner decisions
 
-The main app (AI exercises, 15 Karak Pop pages, sign-in, marking, Excel, Docker) is **done and working**. See [README.md](README.md) and [pages.md](pages.md).
+The exercise app and company simulation are implemented. The owner asked to continue the prior handoff, then explicitly requested deployment to **https://accounting.tryzarqa.com** on the existing tryzarqa VPS, reusing existing DeepSeek, Resend and SSH configuration. The owner added the DNS A record; both public DNS and the VPS resolve it to `173.249.40.122`.
 
-The **company simulation** is now **built and partly tested in the browser**:
+The owner clarified that **student tasks can differ every month according to the teacher's AI request**, including changing upcoming coursework while a simulation is running. This is now implemented:
 
-- Doctor: Simulations tab, add the sample sim, review with Overview / Test play / Edit, give to a class, control room. Verified.
-- Student: name company → Decide → Record → Results (marks + statements + feedback + leaderboard). Verified for one month.
-- Not yet verified: "Open next month" with auto-play, the end-of-sim final page, the Excel export, a real DeepSeek sim generation.
+- A simulation's optional `monthWork` contains separate monthly briefs and parts. Existing simulations keep working through their shared `monthParts` fallback.
+- The creation prompt asks for month-specific coursework. Review shows the monthly curriculum; Edit can change each month's worksheets or their shared defaults.
+- The control room's **Plan the next month with AI** selects an unopened month, generates a draft, shows Student view/Answer key, then applies it to that class only.
+- Run-specific plans are stored in `sim_runs.month_work`; they do not mutate the published simulation or another class's run.
+- The active month and all earlier months are locked. Apply rechecks that boundary under a database row lock, including a draft generated before the teacher opened its target month.
+- Business decisions, events, company state and business scoring remain the same. The live AI control changes coursework using existing model formulas; it does not invent a new business model midway through a class.
+- Student books, grading, reports, skipped-month mark maxima and Excel standings use the selected monthly plan.
 
-`npm test`: 28 tests pass. `npx tsc --noEmit` is clean.
+The owner then said **"just deploy dont manually check for now"**. Stop further manual walkthroughs; finish the production build, deployment and basic availability check. The unfinished student walkthrough is deliberately deferred, not claimed as passed.
 
-## What the sim is (decided with the user)
+## Changes and validation
 
-| Topic | Choice |
-|---|---|
-| Month loop | Decide → event → record the books → results, then next month |
-| Opponents | Solo company per student + class leaderboard (company names only; doctor sees emails) |
-| Book mistakes | Lose marks, but next month starts from the **correct** books |
-| Final mark | Accounting accuracy + business performance; doctor sets the weight (default 70% accounting) |
-| Decisions | AI picks them (number with min/max/step, choice, toggle); doctor edits |
-| Pace | **Doctor opens each month** for the whole class |
-| Events | AI-written, same event in the same month for everyone |
-| Results screen | SVG charts over months, real statements, feedback notes, leaderboard rank |
-| Missed month | When the doctor opens the next month, unfinished months are auto-played on default decisions with 0 accounting marks |
-| Business score | AI formula with `poor` / `excellent` reference values (normalised 0–1) |
-| Placement | New **Simulations** section with its own top-bar tab |
+- Fixed deadline expiry: the first visit/export after expiry settles unfinished opened months and fixes the run's end time at its deadline. Unopened months do not count.
+- Fixed late joining: naming a company after month one settles earlier months so the student can start the current one.
+- Unsubmitted books with locked decisions retain those decisions, receive zero accounting marks and count as auto-played.
+- Local unsent drafts are scoped by player and month; one student's or a skipped month's draft no longer leaks into another worksheet.
+- Added migration `drizzle/0002_thick_komodo.sql` and its generated metadata.
+- `npm test`: **33 tests pass**, including five real embedded-Postgres integration tests for deadlines, late joining, skipped months, run isolation, future-only changes and unchanged historical marks.
+- `npm run typecheck`: **passes**.
+- Real DeepSeek generation: bakery in Nizwa, four months, inventory and a loan; generated simulation passed `analyzeSim` in the review screen. Local sim ID `60e87dd8-2e51-4430-8bdf-fd7cab075bd8`.
+- Real live DeepSeek change: February's journals replaced with an inventory schedule and net-income question. Student preview and answer key worked, and **Apply to February** succeeded. Local run `1ea990ea-1cb2-4cce-b074-6e82a9818039`.
+- Desktop (1440) and phone (390) draft captures checked; inherited Karak Pop styling preserved. Mechanical UI detector returned `[]`. A limited finish review found Apply errors could appear above a long preview; they now appear beside Apply. Further manual checking was stopped by owner request.
+- The original latest commit `28136b0` says auto-play, end-run and Excel were browser-verified by the preceding agent; those checks were still listed as unfinished in the old handoff. This session has automated persistence coverage but has not repeated the complete student/final/Excel walkthrough.
+- `npm run build`: **passes**, including production compilation, type validation and all route generation.
+- Deployment: source uploaded and private production environment created; Docker build running at this preparation point. Update with the actual availability outcome before handing off.
 
-Full plan: the "Company Simulation" plan in the Claude plans folder; summary below.
+## Deployment
 
-## Done
+Use [deploy/README.md](deploy/README.md). SSH identity is `C:\Users\abdul\.ssh\zarqa_vps`, account `deploy@173.249.40.122`. Existing apps share this VPS; build/start only the `accounting-sim` Compose project.
 
-- `src/lib/spec/expr.ts`: added `floor()`, `ceil()`, `pow()`.
-- `src/lib/spec/schema.ts` + `engine.ts`: optional `when` on grid rows, journal entries, numeric questions and transactions. `effectiveSpec()` drops items whose `when` is 0. It runs inside `buildView`, `grade` and `perfectAnswers`, and `analyze` validates the `when` formulas.
-- `src/lib/sim/schema.ts`: `SimSpecSchema` (constants, decisions, state with `opening`/`closing`, derived, eventVars, events, monthTransactions, monthParts, statements, metrics, feedback, score, checks).
-- `src/lib/sim/engine.ts`:
-  - `simulateMonth`, `runCompany` (chains true closing → next opening; `null` month = default decisions = auto-play), `monthExercise` (a month as a normal `ExerciseSpec`, so the existing `grade` / `buildView` / `Sheet` work), `statementsView`.
-  - `businessScore` (extra names `total_X`, `min_X_end`, `max_X_end`), `finalMark`.
-  - `validateDecisions`, `defaultDecisions`, `randomDecisions`.
-  - `analyzeSim` plays defaults + 20 random games and checks every formula and check.
-- `src/lib/sim/fixtures/karakSim.ts`: 4-month karak kiosk sample (weighted-average inventory, depreciation, loan + interest, 3 events). Score: poor 5,000, excellent 12,000.
-- `src/lib/sim/engine.test.ts`: chaining, determinism, auto-play, `when`, full marks, statements, scores, decision rules, broken sims, calibration.
-- `src/db/schema.ts` + `drizzle/0001_sims.sql`: tables `sims`, `sim_versions`, `sim_runs` (`opened_month`, `deadline`, `accounting_weight`, `ended_at`), `sim_players` (`company_name`, unique per run+student), `sim_months` (pk player+month; `decisions`, `answers`, `step` record|done, `acc_score`, `acc_max`, `auto`). A month with no row = the student hasn't decided yet.
-- `src/lib/ai/generate.ts`: `runWithRepair<T>(messages, kind, schema, check, id, what)` is now generic; `courseContextFor(query, useLibrary)` is exported.
-- `src/lib/ai/simPrompt.ts` (`SIM_PROMPT`, includes the sample as the example) and `src/lib/ai/simGenerate.ts` (`generateSim`, `reviseSim`, `simProblems`, `simWarnings`). Not yet run against real DeepSeek.
+- Location: `/home/deploy/accountingsim`.
+- Shared network `zarqa_default`, unique app alias `accounting-sim`.
+- Existing proxy: `zarqa-caddy-1`; mounted config `/opt/zarqa/deploy/Caddyfile`.
+- `deploy/docker-compose.shared.yml` disables this project's dedicated Caddy and joins only the app to the existing proxy network.
+- `deploy/bootstrap-env.py` creates a private `.env`, generating new session/database secrets and copying only needed DeepSeek/Resend settings from the server's existing apps. It never prints keys and refuses to replace an existing `.env`.
+- Sender: `AccountingSim <noreply@tryzarqa.com>`. Production has no `0000` bypass.
+- `deploy/ensure-caddy.py` backs up and preserves existing routes, adds only the marked AccountingSim block, validates/reloads, and rolls back on failure. Other apps' future deployments must preserve this block or rerun the script.
+- Database and uploads have independent named volumes. Nightly backups go into the deployment's `backups` directory.
 
-## Original build list (steps 1–4 are now DONE: see "Remaining" at the end)
+No secrets are committed. `.env.local` is ignored and contains the reused DeepSeek setting for local development; production Resend is configured on the VPS only. Never print environment-file contents or keys.
 
-1. **`src/lib/sim/data.ts`**
-   - `loadSim(id)`.
-   - `loadGame(runId, studentId)`: run + sim spec + player + month rows.
-   - `companyResults(spec, rows)`: `runCompany` with each row's decisions.
-   - `autoFill(runId, monthsBefore)`: creates players for enrolled students who have none (name e.g. "Company 3"). For every player and every month < opened month: no row → insert defaults, `auto = true`, `step = done`, `acc_score = 0`, `acc_max` = that month's books max. Row still at `record` → `done` with 0.
-   - `leaderboard(run, spec)`: per player accounting total, `businessScore` over finished months, `finalMark`; sorted.
-2. **`src/app/actions/sim.ts`** (pattern: `src/app/actions/teacher.ts` / `student.ts`, with `requireTeacher` / `requireStudent`).
-   - Doctor: `generateSimAction(fd)`, `addSampleSim()`, `saveSim(id, json)`, `reviseSimAction`, `publishSim`, `copySim`, `deleteSim`, `restoreSimVersion`, `createSimRun(fd)`, `openNextMonth(runId)` (calls `autoFill`, then `opened_month + 1`; can't pass `spec.months`), `endRun`, `changeRunDeadline`.
-   - Student: `startCompany(runId, name)`, `lockDecisions(runId, raw)` (only for `opened_month`, `validateDecisions`, insert row step `record`), `submitMonthBooks(runId, answers)` (grade `monthExercise` → `acc_score`/`acc_max`, step `done`).
-   - The event and books are revealed only after decisions are locked; the corrections only after hand-in. Nothing is accepted after `deadline` / `ended_at`.
-3. **Doctor pages** (Karak Pop, reuse `src/components/ui/*`, `Sheet`, `ResultSheet`, `AiWorking`, `ChoiceGroup`):
-   - `/t/sims`: list + Create + "Add the sample sim".
-   - `/t/sims/new`: like `src/app/t/exercises/new/CreateForm.tsx`. **Use `onSubmit`, not `action=`**, so the loader shows.
-   - `/t/sims/[id]`:
-     - tabs Overview / **Test play** (decision controls → `runCompany` client-side → charts + statements + answer key per month) / Edit / versions + "Ask the AI to change it".
-     - For Edit: small tables for constants, decisions, state, derived, events, feedback, metrics, score. Reuse `SpecEditor` for `monthParts` by passing a pseudo `ExerciseSpec` with month-1 values as params; add a prop to hide its business/amounts sections. Advanced JSON at the end.
-   - `/t/sims/[id]/assign`: class, deadline, accounting weight.
-   - `/t/sim-runs/[id]` control room: Open month N+1 with a confirm showing how many get auto-played, leaderboard with emails, progress, Excel (`exceljs`, like `src/app/t/assignments/[id]/export/route.ts`).
-   - `/t/sim-runs/[id]/students/[sid]`.
-   - Add a "Simulations" link in `src/components/ui/NavLinks.tsx`.
-4. **Student pages**:
-   - Sim cards on `src/app/s/page.tsx`.
-   - `/s/sims/[runId]`: name company → stepper Decide / Event / Record / Results.
-   - `/s/sims/[runId]/final`.
-   - New components in `src/components/sim/`: `DecisionForm`, `EventCard`, `LineChart` (plain SVG, design tokens), `Stepper`, `Leaderboard`.
-5. Update `pages.md` and `README.md` with the new pages.
-6. **Verify:**
-   - `npm test`, `npx tsc --noEmit`, `npm run build`.
-   - Browser: doctor adds the sample sim → assigns; student plays month 1; a second student skips; doctor opens month 2 → auto-play shows; leaderboard; final page; Excel.
-   - One real DeepSeek run ("a bakery in Nizwa, 4 months, inventory and a loan") must pass `analyzeSim`.
-7. Commit and push.
+## Development notes
 
-## Dev notes (gotchas)
+`npm ci`, then `npm run dev`. Local allowed emails can use `0000` only in development. Teacher allowlist is in `.env.example`; students use `@student.gutech.edu.om`.
 
-- **Run:** `npm run dev`. Locally the sign-in code **0000** works for any allowed email (dev mode only). The DeepSeek key is in `.env.local` (git-ignored; never put keys in `.env.example`).
-- **New migrations** only apply when the database is first opened, so **restart the dev server** after `npm run db:generate`. The first start in the OneDrive folder takes about 12 s while the embedded database opens.
-- `next build` and `next dev` share `.next`: stop the dev server before building.
-- React 19: state updates inside a form `action=` function don't render until it finishes. Use `onSubmit` + `preventDefault` for forms that show a loading state.
-- Popovers inside dark (`.card.ink`) cards need `color: var(--ink)` (already in CSS).
-- The shell safety check blocks heredocs containing `find … -delete`: write such files with the editor instead.
-- The GitHub connector in Claude is broken (no token). Pushing works through Git Credential Manager (`git push`).
-- Teacher accounts share all classes/exercises. Teacher emails come from `TEACHER_EMAILS`; students are `@student.gutech.edu.om`.
+Restart the dev server after adding migrations. Stop it before `npm run build` because both use `.next`. Forms showing AI progress use `onSubmit` rather than React form `action=` so loading states paint immediately.
 
-## Remaining (as of the last push)
+The simulation follows Decide → event → teacher-directed tasks → Results, with one company per student and company-name-only student leaderboard. Correct closing books always feed the next month. Default weighting is 70% accounting, configurable by the teacher. Final results use `/s/sims/[runId]`; there is no separate `/final` route.
 
-- Browser-test: the doctor opens February and March (a skipped month must show as auto-played with 0 book marks), "End the simulation now" → the student final page, the Excel download.
-- One real DeepSeek run on `/t/sims/new` ("a bakery in Nizwa, 4 months, inventory and a loan"); it must pass `analyzeSim`.
-- Update `pages.md` + `README.md` with the Simulations pages. The final results are shown on `/s/sims/[runId]` once the run has ended; there's no separate `/final` page.
-- `npm run build` (stop the dev server first), commit, push.
+`README.md` and `pages.md` document all simulation routes and the live coursework flow. Dependency upgrades were outside this feature/deploy change; the existing lockfile's audit findings remain to be reviewed separately.
+
+## Deferred work
+
+- When the owner requests testing again: complete the browser student flow with a changed month, skipped month, final results and Excel download.
+- Consider broader live simulation editing only if requested; current live AI changes coursework while preserving the business model.

@@ -7,6 +7,7 @@ import { Badge, PageTitle, Progress, fmtDate } from "@/components/ui/bits";
 import { ConfirmButton } from "@/components/ui/client";
 import { Leaderboard } from "@/components/sim/SimBits";
 import { endRunForm, openNextMonthForm } from "@/app/actions/sim";
+import { MonthWorkEditor } from "./MonthWorkEditor";
 
 export default async function ControlRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,6 +89,8 @@ export default async function ControlRoom({ params }: { params: Promise<{ id: st
           )}
         </div>
       </div>
+
+      {!st.ended && !st.lastMonth && <MonthWorkEditor key={run.openedMonth} runId={id} openedMonth={run.openedMonth} spec={spec} />}
 
       <section className="stack-sm">
         <div className="row-between">

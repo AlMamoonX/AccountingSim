@@ -115,4 +115,21 @@ There are two kinds of people: **the doctor** (teacher) and **students**. Every 
 - "The deadline has passed."
 - "You've been signed out, please sign in again."
 
+## Company simulation pages
+
+The **Simulations** top-bar tab opens a separate company game flow alongside ordinary exercises.
+
+| Page | Route | What happens |
+|---|---|---|
+| My simulations | `/t/sims` | Create with AI, add the four-month Karak sample, copy, or open a draft/published simulation. |
+| Create a simulation | `/t/sims/new` | Describe the company, decisions, topics, events and different student tasks for each month. The AI writes and validates the model and coursework. |
+| Review and edit | `/t/sims/[id]` | See the monthly task plan, test play each month and its answer key, edit shared or month-specific worksheets, revise with AI, restore a version, publish. |
+| Give a simulation to a class | `/t/sims/[id]/assign` | Choose the class, final deadline in Muscat time, and the accounting/business weights. Month one opens immediately. |
+| Control room | `/t/sim-runs/[id]` | Track progress and the leaderboard with student emails, open the next month, end early, or download Excel. Ask AI to change an unopened month's tasks, preview the student sheet/answer key, then apply to this class. Current and completed months stay locked. |
+| One company's results | `/t/sim-runs/[id]/students/[sid]` | Review decisions, events, marked coursework, feedback, charts and true statements month by month. |
+| Leaderboard export | `/t/sim-runs/[id]/export` | Download Excel with company, student, rank, weighted mark, business score, accounting marks and auto-played month counts. Teacher access required. |
+| Student company | `/s/sims/[runId]` | Name the company, decide, reveal the event, complete this month's teacher-directed tasks, and see marks, statements, feedback and company-name leaderboard. Earlier months remain available during play. When the run ends, this same page shows final marks and rank. |
+
+Student home (`/s`) shows simulation cards for joined classes. The teacher controls when months open. Skipped months use default decisions and zero book marks; unfinished books retain locked decisions and receive zero book marks. A late joiner starts in the open month after earlier months are auto-played. Each next month starts from correct closing books, even if the student's answers were wrong.
+
 ---

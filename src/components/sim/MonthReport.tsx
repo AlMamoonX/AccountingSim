@@ -28,7 +28,7 @@ export function MonthReport({ spec, result, row, showBooks = true }: { spec: Sim
               </li>
             ))}
           </ul>
-          {row.auto && <p className="badge b-orange">Auto-played: no decisions or books handed in</p>}
+          {row.auto && <p className="badge b-orange">Auto-played: books not handed in, 0 accounting marks</p>}
           <p className="label">
             Books:{" "}
             <span className="mono">

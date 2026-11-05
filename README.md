@@ -25,12 +25,23 @@ Code map:
 
 ```
 src/lib/spec/     exercise format (schema.ts), safe formula language (expr.ts), engine + marking (engine.ts), tests
+src/lib/sim/      company model, month-specific coursework, validation, persistence and leaderboards
 src/lib/ai/       DeepSeek client, system prompt, generate / revise with automatic repair
 src/lib/library.ts  lecture upload, PDF/PowerPoint text, Postgres full-text search
 src/lib/auth.ts   6-digit email codes (Resend), sessions, doctor allowlist
 src/app/t/...     doctor pages        src/app/s/...  student pages
 src/db/           Drizzle schema + database connection (migrations in ./drizzle run automatically)
 ```
+
+## Company simulations
+
+Open **Simulations** to add the four-month Karak sample or ask DeepSeek to design a company. Describe the student work month by month: journals in month one, inventory in month two, financial statements later. The AI chooses the decisions, events and markable tasks from the teacher's request. Review the month plan, test play and answer key before giving it to a class.
+
+Students name their company, make decisions, face that month's event, then complete the assigned tasks. Results show bookkeeping marks, correct statements, business performance and a leaderboard containing company names only. The teacher chooses how accounting accuracy and business performance contribute to the final mark.
+
+The teacher opens each month from the **control room**. Its **Plan the next month with AI** control can draft different coursework for any unopened month. Preview the student sheet and answer key, then apply it to this class. Current and completed months are locked; these changes do not alter the company model or other classes. Students receive their company's actual figures and are marked against the applied month plan.
+
+Unfinished months receive zero accounting marks when the next month opens or the run ends. Missing decisions use defaults; already locked decisions are retained. Correct closing books carry into the next month regardless of bookkeeping mistakes. A student joining late has earlier months auto-played. The final deadline settles opened months on the next visit or export; early ending settles only the months already opened. Final results appear at `/s/sims/[runId]`, with no separate final route. Teachers can download the leaderboard as Excel.
 
 ## Run it on your own computer
 
@@ -59,6 +70,8 @@ npm test
 ```
 
 ## Put it on the VPS (Docker)
+
+For the existing tryzarqa.com VPS, use [the shared-proxy deployment instructions](deploy/README.md). The dedicated-server setup below starts its own Caddy and needs ports 80/443 free.
 
 Needs a Linux server with Docker, and a domain (e.g. `accsim.example.com`) whose DNS A record points at the server.
 

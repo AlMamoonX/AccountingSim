@@ -3,7 +3,8 @@ import { getDb, schema } from "@/db";
 import type { SimMonthRow, SimPlayerRow, SimRunRow } from "@/db/schema";
 import { isUuid } from "@/lib/data";
 import { grade } from "@/lib/spec/engine";
-import { SimSpecSchema, type SimSpec } from "./schema";
+import { SimMonthWorkSchema, SimSpecSchema, type SimSpec } from "./schema";
+import { withMonthWork } from "./work";
 import { businessScore, defaultDecisions, finalMark, monthExercise, runCompany, type MonthResult } from "./engine";
 import type { Values } from "@/lib/spec/engine";
 
@@ -16,7 +17,7 @@ export async function loadSim(id: string) {
 }
 
 export function runState(run: SimRunRow, spec: SimSpec, now = new Date()) {
-  const ended = !!run.endedAt || now > run.deadline;
+  const ended = !!run.endedAt || now >= run.deadline;
   return { ended, month: Math.min(run.openedMonth, spec.months), lastMonth: run.openedMonth >= spec.months };
 }
 
@@ -30,7 +31,16 @@ export async function loadRun(runId: string) {
     .innerJoin(schema.classes, eq(schema.classes.id, schema.simRuns.classId))
     .where(eq(schema.simRuns.id, runId));
   if (!row) return null;
-  return { ...row, spec: SimSpecSchema.parse(row.sim.spec) as SimSpec };
+  const overrides = SimMonthWorkSchema.array().parse(row.run.monthWork);
+  const spec = withMonthWork(SimSpecSchema.parse(row.sim.spec), overrides);
+  // A deadline must settle missed books just like the doctor's End action.
+  // This is idempotent and runs on the first visit/export after expiry.
+  if (!row.run.endedAt && runState(row.run, spec).ended) {
+    await autoFill(row.run, spec, Math.min(row.run.openedMonth, spec.months));
+    await db.update(schema.simRuns).set({ endedAt: row.run.deadline }).where(and(eq(schema.simRuns.id, runId), eq(schema.simRuns.deadline, row.run.deadline)));
+    row.run.endedAt = row.run.deadline;
+  }
+  return { ...row, spec };
 }
 
 export async function monthRows(playerId: string) {
@@ -91,7 +101,7 @@ export async function autoFill(run: SimRunRow, spec: SimSpec, upTo: number) {
         const max = monthMax(spec, results[m - 1]);
         await db
           .update(schema.simMonths)
-          .set({ step: "done", accScore: 0, accMax: max, doneAt: new Date() })
+          .set({ step: "done", accScore: 0, accMax: max, auto: true, doneAt: new Date() })
           .where(and(eq(schema.simMonths.playerId, p.id), eq(schema.simMonths.month, m)));
         row.step = "done";
         autoPlayed++;

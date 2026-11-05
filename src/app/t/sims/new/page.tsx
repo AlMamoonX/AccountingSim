@@ -37,12 +37,12 @@ export default function NewSimPage() {
         >
           <section className="card hero">
             <label className="field">
-              <span className="card-title">Describe the simulation you want</span>
+              <span className="card-title">Describe the simulation and each month's tasks</span>
               <textarea
                 className="textarea"
                 name="prompt"
                 rows={5}
-                placeholder="e.g. A bakery in Nizwa over 4 months. Students choose prices, how much flour to buy and whether to hire a second baker. Practise inventory, a bank loan and depreciation."
+                placeholder="e.g. A bakery in Nizwa over 4 months. Students choose prices and stock. Month 1: journal entries. Month 2: inventory and a loan. Month 3: income statement. Month 4: full financial statements."
               />
             </label>
           </section>

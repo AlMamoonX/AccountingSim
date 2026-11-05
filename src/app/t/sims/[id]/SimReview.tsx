@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SimSpecSchema, type SimSpec } from "@/lib/sim/schema";
 import { analyzeSim, businessScore, defaultDecisions, monthExercise, runCompany, statementsView } from "@/lib/sim/engine";
+import { withMonthWork } from "@/lib/sim/work";
 import { buildView, perfectAnswers, type Values } from "@/lib/spec/engine";
 import { formatAmount } from "@/lib/spec/format";
 import type { ExerciseSpec } from "@/lib/spec/schema";
@@ -258,6 +259,19 @@ function Overview({ spec }: { spec: SimSpec }) {
           </p>
         </section>
       </div>
+      <section className="card stack-sm">
+        <h2>Student tasks by month</h2>
+        <table className="list">
+          <tbody>{Array.from({ length: spec.months }, (_, i) => {
+            const work = spec.monthWork.find((w) => w.month === i + 1);
+            return <tr key={i}><th scope="row">{spec.monthLabels[i] || `Month ${i + 1}`}</th><td>
+              {work && <strong>{work.title}<br /></strong>}
+              {(work?.parts ?? spec.monthParts).map((p) => p.title).join(" · ")}
+            </td></tr>;
+          })}</tbody>
+        </table>
+        <p className="hint">You can ask the AI to change an upcoming month's tasks from the class's control room.</p>
+      </section>
     </div>
   );
 }
@@ -403,14 +417,20 @@ function FieldTable<T extends Record<string, unknown>>({
 function SimEditor({ spec, onChange }: { spec: SimSpec; onChange?: (s: SimSpec) => void }) {
   const ro = !onChange;
   const up = <K extends keyof SimSpec>(k: K, v: SimSpec[K]) => onChange?.({ ...spec, [k]: v });
-  const month1 = useMemo(() => {
+  const [bookMonth, setBookMonth] = useState(1);
+  const selectedMonth = Math.min(bookMonth || 1, spec.months);
+  const monthResult = useMemo(() => {
     try {
-      return runCompany(spec, [defaultDecisions(spec)], 1)[0];
+      return runCompany(spec, [], selectedMonth)[selectedMonth - 1];
     } catch {
       return null;
     }
-  }, [spec]);
-  const books: ExerciseSpec | null = month1 ? { ...monthExercise(spec, month1) } : null;
+  }, [spec, selectedMonth]);
+  const work = spec.monthWork.find((w) => w.month === selectedMonth);
+  const books: ExerciseSpec | null = monthResult ? {
+    ...monthExercise(spec, monthResult),
+    ...(bookMonth === 0 ? { parts: spec.monthParts, transactions: spec.monthTransactions } : {}),
+  } : null;
   const [json, setJson] = useState("");
   const [jsonErr, setJsonErr] = useState<string | null>(null);
 
@@ -573,16 +593,30 @@ function SimEditor({ spec, onChange }: { spec: SimSpec; onChange?: (s: SimSpec) 
           </label>
         </div>
       </section>
-      <h2>Books students keep every month</h2>
-      <p className="hint">Numbers next to the formulas are month 1 with the default decisions. Use “when” in the JSON to hide an entry in months it doesn't happen.</p>
+      <h2>Student tasks by month</h2>
+      <label className="field">
+        <span className="label">Month to edit</span>
+        <select className="input" value={bookMonth} onChange={(e) => setBookMonth(Number(e.target.value))}>
+          <option value={0}>Shared default tasks</option>
+          {Array.from({ length: spec.months }, (_, i) => <option key={i} value={i + 1}>{spec.monthLabels[i] || `Month ${i + 1}`}</option>)}
+        </select>
+      </label>
+      <p className="hint">Numbers use the selected month with default decisions. Editing a month creates its own tasks. Shared defaults apply to months without their own plan.</p>
       {books ? (
         <SpecEditor
+          key={bookMonth}
           booksOnly
           spec={books}
-          onChange={onChange && ((s) => onChange({ ...spec, monthParts: s.parts, monthTransactions: s.transactions }))}
+          onChange={onChange && ((s) => onChange(bookMonth === 0 ? { ...spec, monthParts: s.parts, monthTransactions: s.transactions } : withMonthWork(spec, [{
+            month: selectedMonth,
+            title: work?.title ?? `${spec.business.name} · ${monthResult!.label}`,
+            instructions: work?.instructions ?? "",
+            parts: s.parts,
+            transactions: s.transactions,
+          }])))}
         />
       ) : (
-        <p className="alert warn">Fix the model first: month 1 can't be calculated.</p>
+        <p className="alert warn">Fix the model first: this month can't be calculated.</p>
       )}
       {!ro && (
         <details className="card small">

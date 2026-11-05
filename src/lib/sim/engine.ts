@@ -182,16 +182,17 @@ export function runCompany(spec: SimSpec, decisionsByMonth: (Values | null | und
 /* ------------------------------------------------------------------ */
 
 export function monthExercise(spec: SimSpec, r: MonthResult): ExerciseSpec {
+  const work = spec.monthWork.find((w) => w.month === r.month);
   return {
     version: 1,
-    title: `${spec.business.name} · ${r.label}`,
+    title: work?.title ?? `${spec.business.name} · ${r.label}`,
     business: spec.business,
     currency: spec.currency,
     period: r.label,
-    story: r.event ? `${r.event.title}: ${r.event.text}` : "",
+    story: [work ? `${work.title}\n${work.instructions}` : "", r.event ? `${r.event.title}: ${r.event.text}` : ""].filter(Boolean).join("\n\n"),
     params: Object.entries(r.values).map(([name, value]) => ({ name, value })),
-    transactions: spec.monthTransactions,
-    parts: spec.monthParts,
+    transactions: work?.transactions ?? spec.monthTransactions,
+    parts: work?.parts ?? spec.monthParts,
     checks: [],
     outOfCourse: [],
   };
@@ -289,6 +290,12 @@ export function simStructureIssues(spec: SimSpec): string[] {
   });
   spec.derived.forEach((d) => add(d.name, "derived"));
   spec.monthParts.forEach((p) => add(p.id, "part id"));
+  const workMonths = new Set<number>();
+  for (const work of spec.monthWork) {
+    if (workMonths.has(work.month)) issues.push(`Month ${work.month} has more than one coursework plan`);
+    workMonths.add(work.month);
+    if (work.month > spec.months) issues.push(`Coursework month ${work.month} is beyond the simulation`);
+  }
   for (const d of spec.decisions) {
     const bad = decisionProblem(d, d.default);
     if (bad) issues.push(`Default of ${bad}`);
@@ -335,10 +342,17 @@ export function analyzeSim(spec: SimSpec, samples = 20): SimAnalysis {
         }
         if (!ok && failed.length < 8) failed.push(`${c.label} – fails in ${r.label} (${play.name}: ${describeDecisions(spec, r.decisions)})`);
       }
-      if (play === plays[0] || r.month === 1) {
+      {
         const a = analyze(monthExercise(spec, r));
         a.errors.forEach((e) => errors.push(`${r.label} books: ${e}`));
         a.checks.filter((c) => !c.ok).forEach((c) => failed.length < 8 && failed.push(`${r.label} books (${play.name}): ${c.label}`));
+        try {
+          const ex = monthExercise(spec, r);
+          const params = Object.fromEntries(ex.params.map((p) => [p.name, p.value]));
+          if (buildView(ex, params).parts.length === 0) errors.push(`${r.label}: no student tasks are visible for ${play.name}`);
+        } catch (e) {
+          errors.push(`${r.label} tasks: ${(e as Error).message}`);
+        }
       }
     }
     if (play === plays[0]) {

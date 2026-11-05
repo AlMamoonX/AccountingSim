@@ -7,3 +7,4 @@ backups
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+.impeccable/review/

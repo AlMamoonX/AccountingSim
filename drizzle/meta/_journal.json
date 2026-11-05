@@ -15,6 +15,13 @@
       "when": 1793905404204,
       "tag": "0001_sims",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793907268097,
+      "tag": "0002_thick_komodo",
+      "breakpoints": true
     }
   ]
 }

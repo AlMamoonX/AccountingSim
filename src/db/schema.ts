@@ -228,6 +228,7 @@ export const simRuns = pgTable("sim_runs", {
   deadline: timestamp("deadline", { withTimezone: true }).notNull(),
   accountingWeight: integer("accounting_weight").notNull().default(70),
   endedAt: timestamp("ended_at", { withTimezone: true }),
+  monthWork: jsonb("month_work").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

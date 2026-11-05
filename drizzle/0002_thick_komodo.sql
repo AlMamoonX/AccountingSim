@@ -1,0 +1,1 @@
+ALTER TABLE "sim_runs" ADD COLUMN "month_work" jsonb DEFAULT '[]'::jsonb NOT NULL;

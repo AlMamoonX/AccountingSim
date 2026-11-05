@@ -39,26 +39,26 @@ export function DecideClient({ runId, decisions, initial }: { runId: string; dec
   );
 }
 
-const KEY = (runId: string) => `accsim-books-${runId}`;
+const KEY = (draftId: string) => `accsim-books-${draftId}`;
 
-export function RecordClient({ runId, view }: { runId: string; view: ExerciseView }) {
+export function RecordClient({ runId, draftId, view }: { runId: string; draftId: string; view: ExerciseView }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<StudentAnswers>({});
   // Restore an unsent draft after mount (keeps server and browser HTML the same).
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(KEY(runId));
+      const saved = localStorage.getItem(KEY(draftId));
       if (saved) setAnswers(JSON.parse(saved) as StudentAnswers);
     } catch {
       /* storage unavailable */
     }
-  }, [runId]);
+  }, [draftId]);
   const [error, setError] = useState<string | null>(null);
   const onChange = (partId: string, v: GridAnswers | JournalAnswers | NumericAnswers) => {
     const next = { ...answers, [partId]: v };
     setAnswers(next);
     try {
-      localStorage.setItem(KEY(runId), JSON.stringify(next));
+      localStorage.setItem(KEY(draftId), JSON.stringify(next));
     } catch {
       /* storage unavailable: answers stay in memory */
     }
@@ -85,7 +85,7 @@ export function RecordClient({ runId, view }: { runId: string; view: ExerciseVie
             const r = await submitMonthBooks(runId, answers);
             if (r.ok) {
               try {
-                localStorage.removeItem(KEY(runId));
+                localStorage.removeItem(KEY(draftId));
               } catch {
                 /* ignore */
               }

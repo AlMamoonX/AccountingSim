@@ -1,5 +1,6 @@
-import { SimSpecSchema, type SimSpec } from "@/lib/sim/schema";
+import { SimMonthWorkSchema, SimSpecSchema, type SimSpec } from "@/lib/sim/schema";
 import { analyzeSim } from "@/lib/sim/engine";
+import { withMonthWork } from "@/lib/sim/work";
 import type { ChatMessage } from "./client";
 import { courseContextFor, runWithRepair } from "./generate";
 import { SIM_PROMPT } from "./simPrompt";
@@ -57,4 +58,17 @@ export async function reviseSim(spec: SimSpec, instruction: string, simId: strin
   ];
   const r = await runWithRepair(messages, "sim-revise", SimSpecSchema, simProblems, simId, "simulation");
   return { spec: r.spec, warnings: simWarnings(r.spec, r.problems) };
+}
+
+/** Change coursework only for a future month of this class's running game. */
+export async function generateMonthWork(spec: SimSpec, month: number, instruction: string, runId: string) {
+  const ctx = await courseContextFor(instruction, true);
+  const messages: ChatMessage[] = [
+    { role: "system", content: SIM_PROMPT },
+    { role: "user", content: `This simulation is already running:\n${JSON.stringify(spec)}\n\nThe teacher wants to change ONLY the student tasks for month ${month}:\n${instruction}\n\n${ctx.text}\n\nReturn ONE MONTH WORK PLAN, not a simulation: {"month": ${month}, "title": "...", "instructions": "...", "parts": [Part, ...], "transactions"?: [{"id":"...","text":"...","when"?:"formula"}]}. Use the same grid/journal/numeric part schemas as the example. Use ONLY names already available in the company's monthly formulas. Do not change the business model, decisions, state, events, scoring or other months. Parts replace this month's entire coursework; keep any existing tasks the teacher did not ask to remove. All questions must be automatically markable from existing formulas. Write instructions for students without revealing answers. Omit transactions to retain the normal monthly transactions. Month must equal ${month}.` },
+  ];
+  const schema = SimMonthWorkSchema.refine((w) => w.month === month, `The plan must be for month ${month}`);
+  const result = await runWithRepair(messages, "sim-month-work", schema, (work) => simProblems(withMonthWork(spec, [work])), runId, "month plan");
+  if (result.problems.length) throw new Error(`The month plan did not pass validation: ${result.problems.slice(0, 3).join("; ")}. Try a simpler request.`);
+  return result.spec;
 }

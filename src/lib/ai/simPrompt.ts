@@ -8,7 +8,8 @@ GOALS
 - A realistic small business (Omani context by default, currency OMR), 2–12 months.
 - 3–5 meaningful decisions with real trade-offs (price vs volume, buying stock vs cash, marketing, taking a loan, hiring…).
 - A business model made of formulas so every result is computed exactly. Keep numbers round and realistic: round() money to whole OMR where fractions would appear.
-- Monthly bookkeeping that practises the concepts the doctor asks for, using the course excerpts' terms when given. List anything not in the excerpts in "outOfCourse".
+- Student tasks follow the doctor's request, including DIFFERENT work in different months (e.g. journals first, inventory next, then financial statements). Do not assume every month needs the same worksheet. Use "monthWork" to plan each month's brief and parts. Keep default "monthParts" as a fallback.
+- Monthly coursework practises the concepts the doctor asks for, using the course excerpts' terms when given. List anything not in the excerpts in "outOfCourse".
 - 1–3 events in different months (supplier price change, rush season, breakdown, customer not paying…), each changing event variables.
 
 FORMAT (TypeScript-like):
@@ -26,7 +27,8 @@ FORMAT (TypeScript-like):
   "eventVars": [ { "name": id, "label": string, "default": number } ],
   "events": [ { "month": number, "title": string, "text": string, "set": { eventVarName: formula } } ],
   "monthTransactions": [ { "id": id, "text": string, "when"?: formula } ],
-  "monthParts": Part[],               // the books students keep EVERY month (same parts as normal exercises)
+  "monthParts": Part[],               // default coursework when a month has no specific plan
+  "monthWork": [ { "month": number, "title": string, "instructions": string, "parts": Part[], "transactions"?: Transaction[] } ], // optional per-month overrides, one per month
   "statements": GridPart[],           // income statement / balance sheet etc. shown on the results screen
   "metrics": [ { "label": string, "expr": formula, "kind": "money"|"count"|"percent" } ],   // charted month by month
   "feedback": [ { "when": formula, "text": string } ],   // short coaching notes when a condition is true
@@ -46,7 +48,8 @@ All names must be unique; ids use letters/digits/_ and start with a letter. Part
 PARTS (same as normal exercises): "grid" (columns/groups/rows/cells with {"answer": formula} or {"given": formula}, "totals", "rowHeader"),
 "journal" (accounts + entries with lines {account, debit|credit: formula}), "numeric" (questions with answer formulas).
 Add "when": formula to a grid row, journal entry, numeric question or month transaction to leave it out in months where it doesn't happen
-(e.g. a loan entry "when": "loanIn > 0"). Only hide items whose amounts are 0 that month. Journal accounts need ids different from all other names (e.g. "cashAcc").
+(e.g. a loan entry "when": "loanIn > 0", or a question "when": "month >= 3"). Use monthWork to replace whole worksheets by month. Each month must have at least one visible task. Journal accounts need ids different from all other names (e.g. "cashAcc").
+Month plans can reuse part ids in different months; within one month's exercise, ids must be unique and must not shadow model names. MonthWork transactions are optional: omit them to show the model's normal monthly transactions. Instructions must tell students exactly what to hand in, without revealing the answers.
 
 CHECKS must be true every month for ANY allowed decisions (the app plays the game with many random decisions to test this):
 always include the accounting equation at month end (assets_end == liabilities_end + equity_end) and that stock can't go negative.

@@ -151,7 +151,7 @@ export default async function GamePage({ params }: { params: Promise<{ runId: st
           return (
             <>
               {r.event && <EventCard title={r.event.title} text={r.event.text} />}
-              <RecordClient runId={runId} view={buildView(ex, params)} />
+              <RecordClient key={`${player.id}-${month}`} runId={runId} draftId={`${player.id}-${month}`} view={buildView(ex, params)} />
             </>
           );
         })()}

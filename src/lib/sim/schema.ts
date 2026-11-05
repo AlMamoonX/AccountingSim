@@ -62,6 +62,15 @@ export const SimMetricSchema = z.object({
   kind: z.enum(["money", "count", "percent"]).default("money"),
 });
 
+/** Teacher-directed coursework for one month; the company model stays the same. */
+export const SimMonthWorkSchema = z.object({
+  month: z.number().int().min(1).max(12),
+  title: z.string().min(1),
+  instructions: z.string().default(""),
+  transactions: z.array(z.object({ id: Id, text: z.string(), when: Expr.optional() })).optional(),
+  parts: z.array(PartSchema).min(1),
+});
+
 export const SimSpecSchema = z.object({
   version: z.literal(1).default(1),
   kind: z.literal("sim").default("sim"),
@@ -81,6 +90,8 @@ export const SimSpecSchema = z.object({
   monthTransactions: z.array(z.object({ id: Id, text: z.string(), when: Expr.optional() })).default([]),
   /** The books students keep each month (existing part types). */
   monthParts: z.array(PartSchema).min(1),
+  /** Optional month-specific coursework, chosen by the teacher's AI request. */
+  monthWork: z.array(SimMonthWorkSchema).max(12).default([]),
   /** Statements shown on the results screen (grid parts; every cell is shown filled in). */
   statements: z.array(GridPartSchema).default([]),
   metrics: z.array(SimMetricSchema).min(1),
@@ -100,3 +111,4 @@ export type SimSpec = z.infer<typeof SimSpecSchema>;
 export type SimSpecInput = z.input<typeof SimSpecSchema>;
 export type SimDecision = z.infer<typeof SimDecisionSchema>;
 export type SimEvent = z.infer<typeof SimEventSchema>;
+export type SimMonthWork = z.infer<typeof SimMonthWorkSchema>;

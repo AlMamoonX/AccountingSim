@@ -1,0 +1,17 @@
+# Use with: docker compose -f docker-compose.yml -f deploy/docker-compose.shared.yml up -d --build
+# The existing VPS Caddy owns ports 80/443; only this app joins its network.
+services:
+  app:
+    image: accounting-sim:${IMAGE_TAG:-local}
+    networks:
+      default:
+      proxy:
+        aliases:
+          - accounting-sim
+  caddy:
+    profiles: [dedicated-proxy]
+
+networks:
+  proxy:
+    external: true
+    name: zarqa_default
