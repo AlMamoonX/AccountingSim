@@ -32,7 +32,9 @@ The owner then said **"just deploy dont manually check for now"**. Stop further 
 - Desktop (1440) and phone (390) draft captures checked; inherited Karak Pop styling preserved. Mechanical UI detector returned `[]`. A limited finish review found Apply errors could appear above a long preview; they now appear beside Apply. Further manual checking was stopped by owner request.
 - The original latest commit `28136b0` says auto-play, end-run and Excel were browser-verified by the preceding agent; those checks were still listed as unfinished in the old handoff. This session has automated persistence coverage but has not repeated the complete student/final/Excel walkthrough.
 - `npm run build`: **passes**, including production compilation, type validation and all route generation.
-- Deployment: source uploaded and private production environment created; Docker build running at this preparation point. Update with the actual availability outcome before handing off.
+- VPS Docker production build: **passes**. Application image `accounting-sim:e2722ef`, application code commit `e2722ef1e0168de2ef165440fc0e44407ac4108e`.
+- **Deployed 2026-11-05, approximately 23:52 Muscat time** at https://accounting.tryzarqa.com. App and backup containers are running; database is healthy. Let's Encrypt obtained the certificate, and a normal TLS-verified request from the VPS to `/login` returned **HTTPS 200**.
+- Deployment uncovered an old bind-mounted proxy config inode: reloading `/etc/caddy/Caddyfile` returned "config is unchanged" despite host-file changes. `ensure-caddy.py` now copies the actual current host config to a temporary container path before validation/reload; existing apps need no restart. Host configuration still contains the route for future proxy starts. This deploy-helper fix is committed after the app image commit.
 
 ## Deployment
 
@@ -45,6 +47,7 @@ Use [deploy/README.md](deploy/README.md). SSH identity is `C:\Users\abdul\.ssh\z
 - `deploy/bootstrap-env.py` creates a private `.env`, generating new session/database secrets and copying only needed DeepSeek/Resend settings from the server's existing apps. It never prints keys and refuses to replace an existing `.env`.
 - Sender: `AccountingSim <noreply@tryzarqa.com>`. Production has no `0000` bypass.
 - `deploy/ensure-caddy.py` backs up and preserves existing routes, adds only the marked AccountingSim block, validates/reloads, and rolls back on failure. Other apps' future deployments must preserve this block or rerun the script.
+- New containers: `accounting-sim-app-1`, `accounting-sim-db-1`, `accounting-sim-backup-1`. Public web ports remain owned by the existing proxy; AccountingSim's database has no host port.
 - Database and uploads have independent named volumes. Nightly backups go into the deployment's `backups` directory.
 
 No secrets are committed. `.env.local` is ignored and contains the reused DeepSeek setting for local development; production Resend is configured on the VPS only. Never print environment-file contents or keys.

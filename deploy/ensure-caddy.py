@@ -23,11 +23,21 @@ if updated != original:
     shutil.copy2(target, backup)
     # Keep the inode: the running proxy bind-mounts this exact file.
     target.write_text(updated)
+container_config = '/tmp/accounting-shared-Caddyfile'
+
+def reload_config(validate=True):
+    # Another deployment may have replaced the host file's inode since this
+    # proxy started, leaving its /etc bind mount on an older copy. Load the
+    # actual current host config explicitly, without restarting other apps.
+    subprocess.run(['docker', 'cp', str(target), f'zarqa-caddy-1:{container_config}'], check=True)
+    if validate:
+        subprocess.run(['docker', 'exec', 'zarqa-caddy-1', 'caddy', 'validate', '--config', container_config, '--adapter', 'caddyfile'], check=True)
+    subprocess.run(['docker', 'exec', 'zarqa-caddy-1', 'caddy', 'reload', '--config', container_config, '--adapter', 'caddyfile'], check=True)
+
 try:
-    subprocess.run(['docker', 'exec', 'zarqa-caddy-1', 'caddy', 'validate', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile'], check=True)
-    subprocess.run(['docker', 'exec', 'zarqa-caddy-1', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile'], check=True)
+    reload_config()
 except subprocess.CalledProcessError:
     target.write_text(original)
-    subprocess.run(['docker', 'exec', 'zarqa-caddy-1', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile'], check=False)
+    reload_config(validate=False)
     raise
 print('AccountingSim route validated and loaded; existing routes preserved.')

@@ -16,7 +16,7 @@ python3 deploy/ensure-caddy.py
 curl --fail https://accounting.tryzarqa.com/login
 ```
 
-`ensure-caddy.py` backs up the shared Caddyfile, adds/replaces only the marked AccountingSim block, validates and reloads Caddy, and restores the previous contents if validation/reload fails. Other routes are retained. No separate Caddy container is started. If another app replaces the shared Caddyfile, retain this block in its source configuration or re-run this script.
+`ensure-caddy.py` backs up the shared Caddyfile, adds/replaces only the marked AccountingSim block, validates and reloads Caddy, and restores the previous contents if validation/reload fails. It copies the current host config into the container for loading, avoiding a stale bind-mount inode left by an earlier deployment. Other routes are retained. No separate Caddy container is started. If another app replaces the shared Caddyfile, retain this block in its source configuration or re-run this script.
 
 ## Updates and checks
 

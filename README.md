@@ -2,6 +2,8 @@
 
 Real-business accounting practice for **CS2 145 Accounting & Controlling** (GUtech).
 
+Live at [accounting.tryzarqa.com](https://accounting.tryzarqa.com).
+
 The doctor describes an exercise in plain words ("a car-wash in Muscat, 10 transactions, include an owner withdrawal, then net income"). An AI (DeepSeek) writes the business story, the transactions, the worksheets and the answer key, using the uploaded lecture slides as its reference. The doctor checks and edits it, then gives it to a class. Students solve it in the browser and are marked automatically, each with their own numbers if the doctor wants.
 
 - **What each page does:** [pages.md](pages.md)
