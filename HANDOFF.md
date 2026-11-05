@@ -48,6 +48,7 @@ Use [deploy/README.md](deploy/README.md). SSH identity is `C:\Users\abdul\.ssh\z
 - Sender: `AccountingSim <noreply@tryzarqa.com>`. Production has no `0000` bypass.
 - `deploy/ensure-caddy.py` backs up and preserves existing routes, adds only the marked AccountingSim block, validates/reloads, and rolls back on failure. Other apps' future deployments must preserve this block or rerun the script.
 - New containers: `accounting-sim-app-1`, `accounting-sim-db-1`, `accounting-sim-backup-1`. Public web ports remain owned by the existing proxy; AccountingSim's database has no host port.
+- Post-deploy access issue: the owner's computer's normal DNS lookup returns NXDOMAIN while direct Cloudflare/Google DNS resolve the primary host correctly; clearing Windows DNS cache did not fix the upstream cached answer. Origin and VPS HTTPS requests still return 200. Added `https://accounting.173-249-40-122.sslip.io` as an alternate hostname for the same app, since the normal local resolver already resolves it. **Fallback HTTPS 200 verified from both the owner's computer and VPS**, with normal certificate checks. Primary domain remains unchanged; sessions are per host. No DNS adapter settings or hosts file were changed.
 - Database and uploads have independent named volumes. Nightly backups go into the deployment's `backups` directory.
 
 No secrets are committed. `.env.local` is ignored and contains the reused DeepSeek setting for local development; production Resend is configured on the VPS only. Never print environment-file contents or keys.

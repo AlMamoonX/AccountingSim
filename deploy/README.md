@@ -2,6 +2,8 @@
 
 AccountingSim uses its own Compose project, database and upload volume. The existing `zarqa-caddy-1` proxy owns ports 80/443. Only AccountingSim's app joins its `zarqa_default` network under the unique name `accounting-sim`.
 
+Primary address: https://accounting.tryzarqa.com. A fallback address, https://accounting.173-249-40-122.sslip.io, reaches the same app when a local DNS resolver still caches the new primary domain as nonexistent. Both use valid HTTPS certificates; sign-in sessions are separate per hostname.
+
 ## First deployment
 
 1. Set the DNS A record `accounting.tryzarqa.com` to `173.249.40.122`.
