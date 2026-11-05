@@ -256,3 +256,11 @@ export async function testPlay(id: string, decisions: Record<string, number>[]) 
   if (!sim) return null;
   return runCompany(sim.spec, decisions);
 }
+
+/** Form-friendly wrappers (forms need actions that return nothing). */
+export async function openNextMonthForm(runId: string) {
+  await openNextMonth(runId);
+}
+export async function endRunForm(runId: string) {
+  await endRun(runId);
+}
