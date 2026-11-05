@@ -90,7 +90,13 @@ export function ConfirmButton({
             <div style={{ fontWeight: 700 }}>{question}</div>
             <div className="row">
               {formAction ? (
-                <button className="btn btn-primary btn-small" formAction={formAction} type="submit">
+                <button
+                  className="btn btn-primary btn-small"
+                  formAction={formAction}
+                  type="submit"
+                  // Close after the browser has started the form submission.
+                  onClick={() => setTimeout(() => setOpen(false), 0)}
+                >
                   {confirmLabel}
                 </button>
               ) : (
