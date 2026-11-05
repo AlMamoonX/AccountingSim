@@ -4,7 +4,8 @@
  *   numbers:      1200, 3.5
  *   names:        rent, A.total.cash, partA.r2.cash  (letters, digits, _ and dots)
  *   operators:    + - * /  ( )  == != < <= > >=  && || !
- *   functions:    sum(a, b, ...), min(...), max(...), abs(x), round(x, digits?), if(cond, a, b)
+ *   functions:    sum(a, b, ...), min(...), max(...), abs(x), round(x, digits?), if(cond, a, b),
+ *                 floor(x), ceil(x), pow(x, y)
  *
  * Comparisons return 1 (true) or 0 (false). "==" allows a 0.005 difference for rounding.
  */
@@ -19,7 +20,7 @@ export type Node =
 type Tok = { t: "num" | "name" | "op" | "("  | ")" | ","; v: string; pos: number };
 
 const OPS = ["==", "!=", "<=", ">=", "&&", "||", "+", "-", "*", "/", "<", ">", "!"];
-const FUNCS = new Set(["sum", "min", "max", "abs", "round", "if"]);
+const FUNCS = new Set(["sum", "min", "max", "abs", "round", "if", "floor", "ceil", "pow"]);
 export const EQ_TOLERANCE = 0.005;
 
 export class ExprError extends Error {}
@@ -213,6 +214,15 @@ export function evaluate(node: Node, resolve: (name: string) => number): number 
           return Math.max(...vals);
         case "abs":
           return Math.abs(vals[0] ?? 0);
+        case "floor":
+          return Math.floor((vals[0] ?? 0) + 1e-9);
+        case "ceil":
+          return Math.ceil((vals[0] ?? 0) - 1e-9);
+        case "pow": {
+          const v = Math.pow(vals[0] ?? 0, vals[1] ?? 1);
+          if (!Number.isFinite(v)) throw new ExprError("pow() result is not a number");
+          return v;
+        }
         case "round": {
           const d = Math.max(0, Math.min(6, Math.trunc(vals[1] ?? 0)));
           const f = 10 ** d;

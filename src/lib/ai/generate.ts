@@ -46,8 +46,13 @@ function describe(req: GenerateRequest): string {
 }
 
 async function courseContext(req: GenerateRequest): Promise<{ text: string; hits: LibraryHit[] }> {
-  if (!req.useLibrary) return { text: "", hits: [] };
   const q = [req.prompt, req.topic, ...(req.mustInclude ?? []), ...(req.parts ?? [])].filter(Boolean).join(" ");
+  return courseContextFor(q, req.useLibrary);
+}
+
+/** Lecture pages that match a request, formatted for the AI. */
+export async function courseContextFor(q: string, useLibrary: boolean): Promise<{ text: string; hits: LibraryHit[] }> {
+  if (!useLibrary) return { text: "", hits: [] };
   const [hits, index] = await Promise.all([searchLibrary(q, 8), libraryIndex()]);
   if (!index) return { text: "COURSE EXCERPTS: none uploaded yet. Use standard accounting and list what you used in outOfCourse.", hits: [] };
   const parts = [`COURSE LECTURES AVAILABLE:\n${index}`];
@@ -60,7 +65,7 @@ async function courseContext(req: GenerateRequest): Promise<{ text: string; hits
   return { text: parts.join("\n\n"), hits };
 }
 
-function userMessage(text: string, imageDataUrl?: string): ChatMessage {
+export function userMessage(text: string, imageDataUrl?: string): ChatMessage {
   if (imageDataUrl && env.aiVision) {
     return {
       role: "user",
@@ -74,11 +79,18 @@ function userMessage(text: string, imageDataUrl?: string): ChatMessage {
 }
 
 /** Ask the AI, then validate and recompute everything; send problems back for repair up to MAX_REPAIRS times. */
-async function runWithRepair(messages: ChatMessage[], kind: string, exerciseId?: string) {
-  let lastSpec: ExerciseSpec | null = null;
+export async function runWithRepair<T>(
+  messages: ChatMessage[],
+  kind: string,
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  check: (value: T) => string[],
+  id?: string,
+  what = "exercise",
+): Promise<{ spec: T; problems: string[] }> {
+  let lastSpec: T | null = null;
   let lastProblems: string[] = [];
   for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-    const raw = await chatJSON(messages, attempt ? `${kind}-repair` : kind, exerciseId);
+    const raw = await chatJSON(messages, attempt ? `${kind}-repair` : kind, id);
     messages.push({ role: "assistant", content: raw });
     let json: unknown;
     try {
@@ -88,23 +100,27 @@ async function runWithRepair(messages: ChatMessage[], kind: string, exerciseId?:
       messages.push({ role: "user", content: fixPrompt(lastProblems) });
       continue;
     }
-    const parsed = ExerciseSpecSchema.safeParse(json);
+    const parsed = schema.safeParse(json);
     if (!parsed.success) {
       lastProblems = zodProblems(parsed.error);
       messages.push({ role: "user", content: fixPrompt(lastProblems) });
       continue;
     }
     lastSpec = parsed.data;
-    const a = analyze(parsed.data);
-    lastProblems = [...a.errors, ...a.checks.filter((c) => !c.ok).map((c) => `Check failed (${c.where}): ${c.label}${c.error ? ` – ${c.error}` : ""}`)];
+    lastProblems = check(parsed.data);
     if (!lastProblems.length) break;
     if (attempt < MAX_REPAIRS) messages.push({ role: "user", content: fixPrompt(lastProblems) });
   }
-  if (!lastSpec) throw new Error(`The AI didn't produce a usable exercise. Problems: ${lastProblems.slice(0, 5).join("; ")}`);
+  if (!lastSpec) throw new Error(`The AI didn't produce a usable ${what}. Problems: ${lastProblems.slice(0, 5).join("; ")}`);
   return { spec: lastSpec, problems: lastProblems };
 }
 
-function zodProblems(err: z.ZodError): string[] {
+function exerciseProblems(spec: ExerciseSpec): string[] {
+  const a = analyze(spec);
+  return [...a.errors, ...a.checks.filter((c) => !c.ok).map((c) => `Check failed (${c.where}): ${c.label}${c.error ? ` – ${c.error}` : ""}`)];
+}
+
+export function zodProblems(err: z.ZodError): string[] {
   return err.issues.slice(0, 30).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
 }
 
@@ -119,7 +135,7 @@ export async function generateSpec(req: GenerateRequest): Promise<GenerateResult
   if (req.sample?.text) text += `\n\nSAMPLE EXERCISE the doctor uploaded ("make one like this", new business and numbers):\n${req.sample.text.slice(0, 8000)}`;
   else if (req.sample?.imageDataUrl && env.aiVision) text += "\n\nThe attached image is a SAMPLE EXERCISE: make one like it, with a new business and numbers.";
   const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, userMessage(text, req.sample?.imageDataUrl)];
-  const { spec, problems } = await runWithRepair(messages, "generate");
+  const { spec, problems } = await runWithRepair(messages, "generate", ExerciseSpecSchema, exerciseProblems);
   return {
     spec,
     warnings: warningsFor(spec, problems),
@@ -135,6 +151,6 @@ export async function reviseSpec(spec: ExerciseSpec, instruction: string, exerci
       content: `Here is the current exercise:\n${JSON.stringify(spec)}\n\nThe doctor wants this change:\n"""${instruction}"""\n\nReturn the WHOLE updated exercise as JSON. Keep everything she didn't ask to change.`,
     },
   ];
-  const r = await runWithRepair(messages, "revise", exerciseId);
+  const r = await runWithRepair(messages, "revise", ExerciseSpecSchema, exerciseProblems, exerciseId);
   return { spec: r.spec, warnings: warningsFor(r.spec, r.problems) };
 }

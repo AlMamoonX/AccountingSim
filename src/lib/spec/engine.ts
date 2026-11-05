@@ -275,6 +275,7 @@ export function analyze(spec: ExerciseSpec, params: Values = defaultParams(spec)
       for (const q of part.questions) tryVal(() => model.value(`${part.id}.${q.id}`), `${part.title}, "${q.prompt.slice(0, 40)}"`);
     }
   }
+  for (const w of whenFormulas(spec)) tryVal(() => model.calc(w.expr, w.scope), w.where);
   for (const t of spec.transactions) checkText(model, t.text, undefined, `Transaction ${t.id}`, errors);
   checkText(model, spec.story, undefined, "Story", errors);
   for (const part of spec.parts) {
@@ -302,6 +303,43 @@ function checkText(model: Model, text: string | undefined, scope: string | undef
       errors.push(`${where}: {{${m[1].trim()}}}: ${(e as Error).message}`);
     }
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Conditions: items with a `when` formula that is 0 are left out      */
+/* ------------------------------------------------------------------ */
+
+/** Leaves out rows, entries, questions and transactions whose `when` formula is 0 for these amounts. */
+export function effectiveSpec(spec: ExerciseSpec, params: Values): ExerciseSpec {
+  if (!JSON.stringify(spec).includes('"when"')) return spec;
+  const m = new Model(spec, params);
+  const keep = (w: string | undefined, scope?: string) => {
+    if (!w) return true;
+    try {
+      return m.calc(w, scope) !== 0;
+    } catch {
+      return true;
+    }
+  };
+  const parts = spec.parts
+    .map((p): Part => {
+      if (p.type === "grid") return { ...p, rows: p.rows.filter((r) => keep(r.when, p.id)) };
+      if (p.type === "journal") return { ...p, entries: p.entries.filter((e) => keep(e.when, p.id)) };
+      return { ...p, questions: p.questions.filter((q) => keep(q.when, p.id)) };
+    })
+    .filter((p) => (p.type === "grid" ? p.rows.some((r) => r.kind !== "heading") : p.type === "journal" ? p.entries.length > 0 : p.questions.length > 0));
+  return { ...spec, transactions: spec.transactions.filter((t) => keep(t.when)), parts };
+}
+
+function whenFormulas(spec: ExerciseSpec): { expr: string; scope?: string; where: string }[] {
+  const out: { expr: string; scope?: string; where: string }[] = [];
+  spec.transactions.forEach((t) => t.when && out.push({ expr: t.when, where: `Transaction ${t.id} condition` }));
+  for (const p of spec.parts) {
+    if (p.type === "grid") p.rows.forEach((r) => r.when && out.push({ expr: r.when, scope: p.id, where: `${p.title}, row "${r.label}" condition` }));
+    if (p.type === "journal") p.entries.forEach((e) => e.when && out.push({ expr: e.when, scope: p.id, where: `${p.title}, entry ${e.label ?? e.id} condition` }));
+    if (p.type === "numeric") p.questions.forEach((q) => q.when && out.push({ expr: q.when, scope: p.id, where: `${p.title}, question condition` }));
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ */
@@ -392,6 +430,7 @@ export interface ExerciseView {
 }
 
 export function buildView(spec: ExerciseSpec, params: Values): ExerciseView {
+  spec = effectiveSpec(spec, params);
   const m = new Model(spec, params);
   return {
     title: spec.title,
@@ -503,6 +542,7 @@ export interface GradeResult {
 }
 
 export function grade(spec: ExerciseSpec, params: Values, answers: StudentAnswers): GradeResult {
+  spec = effectiveSpec(spec, params);
   const m = new Model(spec, params);
   const parts = spec.parts.map((p) => {
     const a = (answers?.[p.id] ?? {}) as never;
@@ -628,6 +668,7 @@ function gradeNumeric(m: Model, part: NumericPart, ans: NumericAnswers): PartRes
 
 /** The answer key filled in as if a student had answered everything correctly (for the doctor's preview). */
 export function perfectAnswers(spec: ExerciseSpec, params: Values): StudentAnswers {
+  spec = effectiveSpec(spec, params);
   const m = new Model(spec, params);
   const out: StudentAnswers = {};
   for (const p of spec.parts) {

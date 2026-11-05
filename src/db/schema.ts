@@ -183,3 +183,90 @@ export type ClassRow = typeof classes.$inferSelect;
 export type ExerciseRow = typeof exercises.$inferSelect;
 export type AssignmentRow = typeof assignments.$inferSelect;
 export type SubmissionRow = typeof submissions.$inferSelect;
+
+/* ---------------- company simulations ---------------- */
+
+export const sims = pgTable("sims", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title").notNull(),
+  businessName: text("business_name").notNull().default(""),
+  status: text("status", { enum: ["draft", "published"] }).notNull().default("draft"),
+  spec: jsonb("spec").notNull(),
+  warnings: jsonb("warnings").notNull().default([]),
+  request: jsonb("request"),
+  sources: jsonb("sources").notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const simVersions = pgTable(
+  "sim_versions",
+  {
+    id: serial("id").primaryKey(),
+    simId: uuid("sim_id")
+      .notNull()
+      .references(() => sims.id, { onDelete: "cascade" }),
+    spec: jsonb("spec").notNull(),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sim_version_idx").on(t.simId)],
+);
+
+export const simRuns = pgTable("sim_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  simId: uuid("sim_id")
+    .notNull()
+    .references(() => sims.id),
+  classId: uuid("class_id")
+    .notNull()
+    .references(() => classes.id, { onDelete: "cascade" }),
+  openedMonth: integer("opened_month").notNull().default(1),
+  deadline: timestamp("deadline", { withTimezone: true }).notNull(),
+  accountingWeight: integer("accounting_weight").notNull().default(70),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const simPlayers = pgTable(
+  "sim_players",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => simRuns.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    companyName: text("company_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sim_player_unique").on(t.runId, t.studentId)],
+);
+
+export const simMonths = pgTable(
+  "sim_months",
+  {
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => simPlayers.id, { onDelete: "cascade" }),
+    month: integer("month").notNull(),
+    decisions: jsonb("decisions").notNull(),
+    answers: jsonb("answers").notNull().default({}),
+    step: text("step", { enum: ["record", "done"] }).notNull().default("record"),
+    accScore: real("acc_score"),
+    accMax: real("acc_max"),
+    auto: boolean("auto").notNull().default(false),
+    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.playerId, t.month] })],
+);
+
+export type SimRow = typeof sims.$inferSelect;
+export type SimRunRow = typeof simRuns.$inferSelect;
+export type SimPlayerRow = typeof simPlayers.$inferSelect;
+export type SimMonthRow = typeof simMonths.$inferSelect;

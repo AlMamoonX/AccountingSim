@@ -37,6 +37,8 @@ export const GridRowSchema = z.object({
   /** entry: normal row, counted in column totals. total: a subtotal row (not counted). heading: a label only. */
   kind: z.enum(["entry", "total", "heading"]).default("entry"),
   cells: z.record(z.string(), GridCellSchema).default({}),
+  /** Optional condition: the item is left out when this formula is 0 (e.g. no loan this month). */
+  when: Expr.optional(),
 });
 
 export const GridPartSchema = z.object({
@@ -80,6 +82,8 @@ export const JournalPartSchema = z.object({
         label: z.string().optional(),
         description: z.string(),
         lines: z.array(JournalLineSchema).min(2),
+        /** Optional condition: the item is left out when this formula is 0 (e.g. no loan this month). */
+        when: Expr.optional(),
       }),
     )
     .min(1),
@@ -99,6 +103,7 @@ export const NumericPartSchema = z.object({
         answer: Expr,
         tolerance: z.number().min(0).optional(),
         unit: z.string().optional(),
+        when: Expr.optional(),
       }),
     )
     .min(1),
@@ -118,7 +123,7 @@ export const ExerciseSpecSchema = z.object({
   period: z.string().optional(),
   story: z.string().default(""),
   params: z.array(ParamSchema).default([]),
-  transactions: z.array(z.object({ id: Id, text: z.string() })).default([]),
+  transactions: z.array(z.object({ id: Id, text: z.string(), when: Expr.optional() })).default([]),
   parts: z.array(PartSchema).min(1),
   checks: z.array(CheckSchema).default([]),
   /** Things the AI used that are not in the course slides (shown to the doctor as warnings). */
