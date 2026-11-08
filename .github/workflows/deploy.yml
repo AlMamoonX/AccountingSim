@@ -44,6 +44,8 @@ jobs:
           docker exec -i accounting-sim-db-1 psql -U accsim -d accsim <<'SQL'
           SELECT created_at, kind, model, ok, prompt_tokens, completion_tokens, ms, left(error, 250) AS error
           FROM ai_logs ORDER BY id DESC LIMIT 12;
+          SELECT title, jsonb_path_query_array(spec, '$.** ? (@.answer == "Business entity assumption" || @.given == "Business entity assumption")') AS term_fields
+          FROM sims ORDER BY updated_at DESC LIMIT 2;
           SQL
           docker exec -i accounting-sim-app-1 node <<'NODE'
           const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
