@@ -13,7 +13,7 @@ Owner reported long generation waits and the publish error `Unexpected "entity" 
 - Existing drafts containing accounting terminology in a formula field are recognized conservatively, including the owner's `Business entity assumption` question. Production JSON diagnostics confirmed the phrase is in a numeric question, not a grid cell. These drafts need no AI rewrite solely to fix that error. Explicit number questions and malformed arithmetic still undergo formula validation.
 - Teacher question editor supports selecting number/formula versus short text; student text fields and corrections use text rendering.
 - `npm test`: **46 passed**. `npm run build`: **passes**, including type validation. No manual browser walkthrough performed, per the owner's earlier instruction.
-- Rollout: pending at this preparation point; record the outcome before handing off.
+- **Deployed successfully 2026-11-08**, application revision/image tag `e2d0beee6b86483faa2a6ed6287341b03d14d9fb`. GitHub run https://github.com/AlMamoonX/AccountingSim/actions/runs/42460930700 completed **success**, including production rebuild/restart and public HTTPS verification. Refresh the existing draft page and retry Publish; no AI rewrite is required solely for the business-entity terminology error. Full simulation generation latency after this change has not yet been benchmarked.
 
 ## 2026-11-08: remove duration and output limits
 
