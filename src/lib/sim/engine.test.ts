@@ -108,6 +108,20 @@ describe("Karak Corner sample sim", () => {
 });
 
 describe("broken sims are caught", () => {
+  it("supports long simulations and coursework after month twelve", () => {
+    const long = SimSpecSchema.parse({ ...karakSim, months: 36, monthWork: Array.from({ length: 36 }, (_, i) => ({
+      month: i + 1, title: `Month ${i + 1} task`, parts: [{ id: "LongWork", type: "numeric", title: "Cash", questions: [{ id: "cashQ", prompt: "Closing cash?", answer: "cash_end" }] }],
+    })) });
+    const results = runCompany(long, [], 36);
+    expect(results).toHaveLength(36);
+    expect(results[35].opening).toEqual(results[34].closing);
+    const ex = monthExercise(long, results[35]);
+    const params = Object.fromEntries(ex.params.map((p) => [p.name, p.value]));
+    expect(ex.title).toBe("Month 36 task");
+    expect(grade(ex, params, perfectAnswers(ex, params))).toMatchObject({ score: 1, max: 1 });
+    expect(analyzeSim(long, 1).ok).toBe(true);
+  });
+
   it("finds a books equation that doesn't balance", () => {
     const bad = SimSpecSchema.parse({
       ...karakSim,

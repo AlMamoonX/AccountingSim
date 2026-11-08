@@ -55,7 +55,7 @@ export default function NewSimPage() {
               </label>
               <label className="field">
                 <span className="label">Number of months</span>
-                <input className="input num" name="months" type="number" min={2} max={12} defaultValue={4} />
+                <input className="input num" name="months" type="number" min={2} step={1} defaultValue={4} />
               </label>
               <label className="field">
                 <span className="label">Topics to practise</span>

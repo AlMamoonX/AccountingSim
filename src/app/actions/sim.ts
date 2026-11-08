@@ -20,11 +20,13 @@ const clean = (v: FormDataEntryValue | null, max = 200) => String(v ?? "").trim(
 
 export async function generateSimAction(fd: FormData): Promise<Result<{ id: string }>> {
   const me = await requireTeacher();
+  const duration = SimSpecSchema.shape.months.safeParse(Number(fd.get("months") || 4));
+  if (!duration.success) return { ok: false, error: "Choose a whole number of months, at least 2." };
   const req: SimRequest = {
     prompt: clean(fd.get("prompt"), 4000),
     business: clean(fd.get("business")) || undefined,
     topics: clean(fd.get("topics"), 600).split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
-    months: Math.min(12, Math.max(2, Number(fd.get("months")) || 4)),
+    months: duration.data,
     difficulty: (["easy", "medium", "hard"].includes(clean(fd.get("difficulty"))) ? clean(fd.get("difficulty")) : undefined) as SimRequest["difficulty"],
     decisionIdeas: clean(fd.get("decisionIdeas"), 600) || undefined,
     eventIdeas: clean(fd.get("eventIdeas"), 600) || undefined,

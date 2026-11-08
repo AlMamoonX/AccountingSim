@@ -1,6 +1,16 @@
 # AccountingSim handoff
 
-Updated 2026-11-05 by Codex. Repository: https://github.com/AlMamoonX/AccountingSim, branch `main`. Local checkout: `C:\Projects\ACCsim`.
+Updated 2026-11-08 by Codex. Repository: https://github.com/AlMamoonX/AccountingSim, branch `main`. Local checkout: `C:\Projects\ACCsim`.
+
+## 2026-11-08: remove duration and output limits
+
+Owner requested removal of the simulation duration cap and AI token cutoff. Removed the 12-month ceiling from the creation form, server action, simulation/month-work schemas and AI prompt. The minimum remains two months, and non-integer/invalid durations are rejected rather than silently clamped. A 36-month simulation with 36 distinct coursework plans is covered by an engine regression.
+
+Removed the hard-coded `max_tokens: 8000` from the AI client. Initial requests use the provider default; truncated responses are retried from scratch with a growing budget based on actual completion usage. Partial JSON is never accepted as a finished response. If output stops growing or the provider rejects a larger budget, its model/context limit is reported rather than looping indefinitely. Provider limits still apply; this is not a claim of unlimited model context.
+
+`npm test`: **38 passed**. `npm run typecheck`: **passes**. `npm run build`: **passes**. No manual browser walkthrough requested or performed.
+
+Direct SSH is currently refused from the local network (TCP connects then key exchange is refused). Added a manual-only GitHub deployment workflow using the existing authorized VPS identity and pinned known-host entry. It updates only AccountingSim's app, preserves production secrets and data, checks HTTPS and restores the prior app image on failure. Production rollout is pending; record the result here.
 
 ## Current work and owner decisions
 

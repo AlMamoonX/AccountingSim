@@ -41,6 +41,8 @@ Open **Simulations** to add the four-month Karak sample or ask DeepSeek to desig
 
 Students name their company, make decisions, face that month's event, then complete the assigned tasks. Results show bookkeeping marks, correct statements, business performance and a leaderboard containing company names only. The teacher chooses how accounting accuracy and business performance contribute to the final mark.
 
+There is no application maximum on the number of simulated months (minimum two). AI requests have no fixed application output-token ceiling: if the provider truncates a response, the app retries the full request with a larger budget. The provider's own output/context limits still apply.
+
 The teacher opens each month from the **control room**. Its **Plan the next month with AI** control can draft different coursework for any unopened month. Preview the student sheet and answer key, then apply it to this class. Current and completed months are locked; these changes do not alter the company model or other classes. Students receive their company's actual figures and are marked against the applied month plan.
 
 Unfinished months receive zero accounting marks when the next month opens or the run ends. Missing decisions use defaults; already locked decisions are retained. Correct closing books carry into the next month regardless of bookkeeping mistakes. A student joining late has earlier months auto-played. The final deadline settles opened months on the next visit or export; early ending settles only the months already opened. Final results appear at `/s/sims/[runId]`, with no separate final route. Teachers can download the leaderboard as Excel.

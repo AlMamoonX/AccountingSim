@@ -64,7 +64,7 @@ export const SimMetricSchema = z.object({
 
 /** Teacher-directed coursework for one month; the company model stays the same. */
 export const SimMonthWorkSchema = z.object({
-  month: z.number().int().min(1).max(12),
+  month: z.number().int().min(1),
   title: z.string().min(1),
   instructions: z.string().default(""),
   transactions: z.array(z.object({ id: Id, text: z.string(), when: Expr.optional() })).optional(),
@@ -78,7 +78,7 @@ export const SimSpecSchema = z.object({
   business: z.object({ name: z.string().min(1), description: z.string().optional() }),
   currency: z.string().default("OMR"),
   story: z.string().default(""),
-  months: z.number().int().min(2).max(12),
+  months: z.number().int().min(2),
   monthLabels: z.array(z.string()).default([]),
   constants: z.array(ParamSchema).default([]),
   decisions: z.array(SimDecisionSchema).min(1),
@@ -91,7 +91,7 @@ export const SimSpecSchema = z.object({
   /** The books students keep each month (existing part types). */
   monthParts: z.array(PartSchema).min(1),
   /** Optional month-specific coursework, chosen by the teacher's AI request. */
-  monthWork: z.array(SimMonthWorkSchema).max(12).default([]),
+  monthWork: z.array(SimMonthWorkSchema).default([]),
   /** Statements shown on the results screen (grid parts; every cell is shown filled in). */
   statements: z.array(GridPartSchema).default([]),
   metrics: z.array(SimMetricSchema).min(1),

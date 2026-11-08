@@ -22,6 +22,8 @@ curl --fail https://accounting.tryzarqa.com/login
 
 ## Updates and checks
 
+When local SSH is unavailable, manually run the GitHub **Deploy AccountingSim** workflow on the intended branch. It uses encrypted repository secrets `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS`, preserves the server's private `.env`, rebuilds/restarts only the app and restores the previous image if HTTPS availability fails. It does not run automatically on pushes or restart the shared proxy, database or other apps.
+
 Copy the new source into the same directory, preserving `.env` and `backups`. Re-run the Compose command and Caddy script above. Migrations apply when the app first opens the database. Local development's `0000` shortcut is disabled in production.
 
 ```sh

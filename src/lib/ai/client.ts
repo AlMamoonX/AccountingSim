@@ -21,26 +21,40 @@ export async function chatJSON(messages: ChatMessage[], kind: string, exerciseId
   const started = Date.now();
   const db = await getDb();
   try {
-    const res = await client.chat.completions.create({
-      model: env.aiModel,
-      messages,
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 8000,
-    });
-    const text = res.choices[0]?.message?.content ?? "";
-    await db.insert(schema.aiLogs).values({
-      kind,
-      model: env.aiModel,
-      exerciseId,
-      ok: true,
-      response: text.slice(0, 60_000),
-      promptTokens: res.usage?.prompt_tokens,
-      completionTokens: res.usage?.completion_tokens,
-      ms: Date.now() - started,
-    });
-    if (res.choices[0]?.finish_reason === "length") throw new Error("The AI's answer was cut off (too long). Ask for fewer transactions or parts.");
-    return text;
+    let outputBudget: number | undefined;
+    let previousUsed = 0;
+    while (true) {
+      const res = await client.chat.completions.create({
+        model: env.aiModel,
+        messages,
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        // Use the provider default first. If it truncates, grow from the actual
+        // usage rather than imposing a fixed application output ceiling.
+        ...(outputBudget === undefined ? {} : { max_tokens: outputBudget }),
+      });
+      const text = res.choices[0]?.message?.content ?? "";
+      const truncated = res.choices[0]?.finish_reason === "length";
+      await db.insert(schema.aiLogs).values({
+        kind,
+        model: env.aiModel,
+        exerciseId,
+        ok: !truncated,
+        error: truncated ? "Provider truncated the response; requesting a larger output budget." : null,
+        response: text.slice(0, 60_000),
+        promptTokens: res.usage?.prompt_tokens,
+        completionTokens: res.usage?.completion_tokens,
+        ms: Date.now() - started,
+      });
+      if (truncated) {
+        const used = res.usage?.completion_tokens ?? Math.ceil(text.length / 3);
+        if (used <= previousUsed) throw new Error("The AI provider cannot return a longer response for this request. Its model/context limit has been reached.");
+        previousUsed = used;
+        outputBudget = Math.max(used, outputBudget ?? 0) * 2;
+        continue;
+      }
+      return text;
+    }
   } catch (e) {
     await db
       .insert(schema.aiLogs)

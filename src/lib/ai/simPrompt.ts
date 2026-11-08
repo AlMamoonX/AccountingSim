@@ -5,7 +5,7 @@ export const SIM_PROMPT = `You design month-by-month COMPANY SIMULATION games fo
 Each student runs their own small company. Every month they 1) make business decisions, 2) an event may happen (same for the whole class), 3) they record the month's transactions in the books, 4) they see results and statements. You return ONE simulation as a JSON object in the format below. Reply with JSON only.
 
 GOALS
-- A realistic small business (Omani context by default, currency OMR), 2–12 months.
+- A realistic small business (Omani context by default, currency OMR), lasting the number of months requested by the teacher (at least 2, no fixed upper duration limit). Reuse formulas and shared tasks across months; add individual monthWork plans only where the requested coursework differs.
 - 3–5 meaningful decisions with real trade-offs (price vs volume, buying stock vs cash, marketing, taking a loan, hiring…).
 - A business model made of formulas so every result is computed exactly. Keep numbers round and realistic: round() money to whole OMR where fractions would appear.
 - Student tasks follow the doctor's request, including DIFFERENT work in different months (e.g. journals first, inventory next, then financial statements). Do not assume every month needs the same worksheet. Use "monthWork" to plan each month's brief and parts. Keep default "monthParts" as a fallback.
