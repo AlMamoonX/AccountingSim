@@ -2,6 +2,12 @@ name: Deploy AccountingSim
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy the app or read generation diagnostics
+        type: choice
+        options: [deploy, diagnose]
+        default: deploy
 
 permissions:
   contents: read
@@ -29,7 +35,27 @@ jobs:
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_accounting
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_accounting ~/.ssh/known_hosts
+      - name: Read generation diagnostics
+        if: inputs.operation == 'diagnose'
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_accounting -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 deploy@173.249.40.122 bash -s <<'REMOTE'
+          set -euo pipefail
+          docker exec -i accounting-sim-db-1 psql -U accsim -d accsim <<'SQL'
+          SELECT created_at, kind, model, ok, prompt_tokens, completion_tokens, ms, left(error, 250) AS error
+          FROM ai_logs ORDER BY id DESC LIMIT 12;
+          SQL
+          docker exec -i accounting-sim-app-1 node <<'NODE'
+          const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+          const base = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/$/, '');
+          fetch(base + '/models', { headers: { Authorization: 'Bearer ' + process.env.DEEPSEEK_API_KEY } })
+            .then(async r => ({ status: r.status, body: await r.json() }))
+            .then(({status, body}) => console.log(JSON.stringify({ status, configuredModel: model, models: body.data?.map(m => ({ id: m.id, context: m.context_window, maxOutput: m.max_output_tokens })) })))
+            .catch(() => { console.error('Model metadata lookup failed'); process.exitCode = 1; });
+          NODE
+          REMOTE
       - name: Upload and deploy only AccountingSim
+        if: inputs.operation != 'diagnose'
         run: |
           set -euo pipefail
           git archive --format=tar.gz HEAD > accounting-source.tar.gz
@@ -55,4 +81,5 @@ jobs:
           "${compose[@]}" ps app
           REMOTE
       - name: Confirm public HTTPS
+        if: inputs.operation != 'diagnose'
         run: curl --fail --silent --show-error --max-time 20 --output /dev/null --write-out 'HTTPS %{http_code}\n' https://accounting.tryzarqa.com/login
