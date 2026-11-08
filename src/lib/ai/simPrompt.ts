@@ -9,6 +9,7 @@ GOALS
 - 3–5 meaningful decisions with real trade-offs (price vs volume, buying stock vs cash, marketing, taking a loan, hiring…).
 - A business model made of formulas so every result is computed exactly. Keep numbers round and realistic: round() money to whole OMR where fractions would appear.
 - Student tasks follow the doctor's request, including DIFFERENT work in different months (e.g. journals first, inventory next, then financial statements). Do not assume every month needs the same worksheet. Use "monthWork" to plan each month's brief and parts. Keep default "monthParts" as a fallback.
+- Keep the JSON compact: no indentation or duplicated worksheets. Prefer shared monthParts with month-based "when" conditions for changing questions; use monthWork only when the whole worksheet layout differs. Omit optional/default fields that add no information. Do not repeat unchanged parts, transactions or statements for every month.
 - Monthly coursework practises the concepts the doctor asks for, using the course excerpts' terms when given. List anything not in the excerpts in "outOfCourse".
 - 1–3 events in different months (supplier price change, rush season, breakdown, customer not paying…), each changing event variables.
 
@@ -47,6 +48,7 @@ All names must be unique; ids use letters/digits/_ and start with a letter. Part
 
 PARTS (same as normal exercises): "grid" (columns/groups/rows/cells with {"answer": formula} or {"given": formula}, "totals", "rowHeader"),
 "journal" (accounts + entries with lines {account, debit|credit: formula}), "numeric" (questions with answer formulas).
+For short theory/terminology answers use a numeric-part question with "answerKind":"text", "answer":"Business entity assumption" and optional "acceptedAnswers":["Economic entity assumption"]. These are text answers, NEVER formulas. Keep monetary/calculation questions as normal formula answers. Use short-text questions for assumptions, principles and concepts; do not put theory phrases in grid formula cells.
 Add "when": formula to a grid row, journal entry, numeric question or month transaction to leave it out in months where it doesn't happen
 (e.g. a loan entry "when": "loanIn > 0", or a question "when": "month >= 3"). Use monthWork to replace whole worksheets by month. Each month must have at least one visible task. Journal accounts need ids different from all other names (e.g. "cashAcc").
 Month plans can reuse part ids in different months; within one month's exercise, ids must be unique and must not shadow model names. MonthWork transactions are optional: omit them to show the model's normal monthly transactions. Instructions must tell students exactly what to hand in, without revealing the answers.

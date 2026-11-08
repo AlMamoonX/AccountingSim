@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ExerciseSpecSchema, type ExerciseSpec, type GridPart, type JournalPart, type NumericPart, type Part } from "@/lib/spec/schema";
+import { textAnswer } from "@/lib/spec/questions";
 import { Model, defaultParams } from "@/lib/spec/engine";
 import { formatAmount } from "@/lib/spec/format";
 import { PartBadge } from "@/components/ui/bits";
@@ -408,8 +409,15 @@ function NumericEditor({ part, pi, up, val }: { part: NumericPart; pi: number; u
             <Remove onClick={() => up((s) => void n(s).questions.splice(qi, 1))} label="Remove question" />
           </div>
           <div className="row">
+            <label className="field" style={{ flex: "1 1 140px" }}>
+              <span className="label">Answer type</span>
+              <select className="input" value={textAnswer(q) !== undefined ? "text" : "number"} onChange={(e) => up((s) => void (n(s).questions[qi].answerKind = e.target.value as "number" | "text"))}>
+                <option value="number">Number / formula</option>
+                <option value="text">Short text</option>
+              </select>
+            </label>
             <label className="field" style={{ flex: "2 1 200px" }}>
-              <span className="label">Answer formula</span>
+              <span className="label">{textAnswer(q) !== undefined ? "Expected term" : "Answer formula"}</span>
               <input className="input mono" value={q.answer} onChange={(e) => up((s) => void (n(s).questions[qi].answer = e.target.value))} />
             </label>
             <label className="field" style={{ flex: "1 1 90px" }}>
@@ -427,7 +435,7 @@ function NumericEditor({ part, pi, up, val }: { part: NumericPart; pi: number; u
               />
             </label>
             <span className="mono" style={{ alignSelf: "flex-end", paddingBottom: 14 }}>
-              = {val(`${part.id}.${q.id}`)}
+              = {textAnswer(q) ?? val(`${part.id}.${q.id}`)}
             </span>
           </div>
         </div>

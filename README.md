@@ -41,7 +41,9 @@ Open **Simulations** to add the four-month Karak sample or ask DeepSeek to desig
 
 Students name their company, make decisions, face that month's event, then complete the assigned tasks. Results show bookkeeping marks, correct statements, business performance and a leaderboard containing company names only. The teacher chooses how accounting accuracy and business performance contribute to the final mark.
 
-There is no application maximum on the number of simulated months (minimum two). AI requests have no fixed application output-token ceiling: if the provider truncates a response, the app retries the full request with a larger budget. The provider's own output/context limits still apply.
+There is no application maximum on the number of simulated months (minimum two). AI requests use the provider's advertised output allowance up front, with no fixed application token ceiling. Providers without limit metadata use a growing-budget fallback. The provider's own output/context limits still apply.
+
+Question parts can include short accounting terms using `answerKind: "text"` and optional `acceptedAnswers`, alongside numeric/formula questions. These are marked against the listed terms, ignoring case and extra spacing. They support concepts such as the business entity assumption without trying to parse the expected phrase as arithmetic.
 
 The teacher opens each month from the **control room**. Its **Plan the next month with AI** control can draft different coursework for any unopened month. Preview the student sheet and answer key, then apply it to this class. Current and completed months are locked; these changes do not alter the company model or other classes. Students receive their company's actual figures and are marked against the applied month plan.
 

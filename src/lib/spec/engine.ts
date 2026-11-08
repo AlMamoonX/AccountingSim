@@ -1,6 +1,7 @@
 import { parse, evaluate, ExprError, type Node } from "./expr";
 import type { ExerciseSpec, GridPart, JournalPart, NumericPart, Part, Check } from "./schema";
 import { formatAmount, parseAmount } from "./format";
+import { normalizeTerm, textAnswer } from "./questions";
 
 export { formatAmount, parseAmount };
 
@@ -108,6 +109,7 @@ export class Model {
 
   private buildNumeric(part: NumericPart) {
     for (const q of part.questions) {
+      if (textAnswer(q) !== undefined) continue;
       this.define(`${part.id}.${q.id}`, { node: this.node(q.answer), scope: part.id });
     }
   }
@@ -272,7 +274,7 @@ export function analyze(spec: ExerciseSpec, params: Values = defaultParams(spec)
     } else if (part.type === "journal") {
       for (const a of part.accounts) tryVal(() => model.value(`${part.id}.balance.${a.id}`), `${part.title}, ${a.label}`);
     } else {
-      for (const q of part.questions) tryVal(() => model.value(`${part.id}.${q.id}`), `${part.title}, "${q.prompt.slice(0, 40)}"`);
+      for (const q of part.questions) if (textAnswer(q) === undefined) tryVal(() => model.value(`${part.id}.${q.id}`), `${part.title}, "${q.prompt.slice(0, 40)}"`);
     }
   }
   for (const w of whenFormulas(spec)) tryVal(() => model.calc(w.expr, w.scope), w.where);
@@ -415,7 +417,7 @@ export interface NumericView {
   type: "numeric";
   title: string;
   instructions: string;
-  questions: { id: string; prompt: string; unit?: string }[];
+  questions: { id: string; prompt: string; unit?: string; inputKind?: "text" }[];
 }
 export type PartView = GridView | JournalView | NumericView;
 
@@ -492,7 +494,7 @@ function partView(m: Model, part: Part): PartView {
     type: "numeric",
     title: part.title,
     instructions: m.text(part.instructions, part.id),
-    questions: part.questions.map((q) => ({ id: q.id, prompt: m.text(q.prompt, part.id), unit: q.unit })),
+    questions: part.questions.map((q) => ({ id: q.id, prompt: m.text(q.prompt, part.id), unit: q.unit, inputKind: textAnswer(q) !== undefined ? "text" : undefined })),
   };
 }
 
@@ -528,6 +530,7 @@ export interface PartResult {
   marks: Record<string, Mark>;
   /** Correct values, only sent to the browser once results are released. */
   expected: Record<string, number>;
+  expectedText?: Record<string, string>;
   expectedLines: Record<string, { account: string; side: "debit" | "credit"; amount: number }[]>;
   /** Answer boxes that count, for progress. */
   boxes: number;
@@ -652,6 +655,19 @@ function gradeJournal(m: Model, part: JournalPart, ans: JournalAnswers): PartRes
 function gradeNumeric(m: Model, part: NumericPart, ans: NumericAnswers): PartResult {
   const res: PartResult = { partId: part.id, title: part.title, score: 0, max: 0, marks: {}, expected: {}, expectedLines: {}, boxes: 0, filled: 0 };
   for (const q of part.questions) {
+    const term = textAnswer(q);
+    if (term !== undefined) {
+      (res.expectedText ??= {})[q.id] = term;
+      res.max++;
+      res.boxes++;
+      const got = ans.values?.[q.id];
+      if (typeof got !== "string" || !got.trim()) continue;
+      res.filled++;
+      const ok = [term, ...(q.acceptedAnswers ?? [])].some((value) => normalizeTerm(value) === normalizeTerm(got));
+      res.marks[q.id] = ok ? "right" : "wrong";
+      if (ok) res.score++;
+      continue;
+    }
     const exp = m.value(`${part.id}.${q.id}`);
     const got = parseAmount(ans.values?.[q.id]);
     res.expected[q.id] = exp;
@@ -700,7 +716,7 @@ export function perfectAnswers(spec: ExerciseSpec, params: Values): StudentAnswe
         ),
       };
     } else {
-      out[p.id] = { values: Object.fromEntries(p.questions.map((q) => [q.id, formatAmount(m.value(`${p.id}.${q.id}`))])) };
+      out[p.id] = { values: Object.fromEntries(p.questions.map((q) => [q.id, textAnswer(q) ?? formatAmount(m.value(`${p.id}.${q.id}`))])) };
     }
   }
   return out;
@@ -708,5 +724,5 @@ export function perfectAnswers(spec: ExerciseSpec, params: Values): StudentAnswe
 
 /** Remove the correct values from a result before sending it to a student who may not see answers yet. */
 export function stripExpected(r: GradeResult): GradeResult {
-  return { ...r, parts: r.parts.map((p) => ({ ...p, expected: {}, expectedLines: {} })) };
+  return { ...r, parts: r.parts.map((p) => ({ ...p, expected: {}, expectedText: {}, expectedLines: {} })) };
 }

@@ -26,7 +26,7 @@ export default function NewSimPage() {
     <div className="stack">
       <PageTitle title="Create a simulation" sticker="AI" sub="Describe the company and what students should practise. The AI designs the decisions, the events and the monthly books." />
       {busy ? (
-        <AiWorking steps={["Reading your slides…", "Designing the company…", "Writing the monthly books…", "Playing it 20 times to check…"]} />
+        <AiWorking steps={[]} message="Creating your simulation…" />
       ) : (
         <form
           className="stack"

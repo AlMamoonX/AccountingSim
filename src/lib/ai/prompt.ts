@@ -60,6 +60,7 @@ Names you can use inside formulas:
 - grid cell: A.r2.cash (part.row.column)   column total: A.total.cash   group total: A.group.assets
 - journal: B.debit.cash, B.credit.cash, B.balance.cash (debit − credit)
 - numeric answer: C.netIncome
+- Short theory/terminology questions also use a numeric part, with question "answerKind":"text", "answer":"Business entity assumption" and optional "acceptedAnswers":["Economic entity assumption"]. Such answers are literal text, never formulas; do not reference them in numeric calculations or checks.
 - inside a part you may drop the part prefix (e.g. total.cash, group.assets).
 Decreases are negative numbers in transaction-analysis tables. Use formulas, not hard-coded results (e.g. "-(rent + wages)" not "-2300").
 
@@ -72,7 +73,7 @@ ${JSON.stringify(karakSpec)}
 `;
 
 export function fixPrompt(problems: string[]) {
-  return `Your JSON has these problems. Return the WHOLE corrected exercise as JSON (same format), fixing every one:\n- ${problems
+  return `Your JSON has these problems. Return the WHOLE corrected JSON object in its original format, fixing every one:\n- ${problems
     .slice(0, 30)
     .join("\n- ")}`;
 }

@@ -6,9 +6,9 @@ import { Sheet, type PartExpected } from "./Sheet";
 /** Marked, read-only sheet: wrong values struck through with the correct value below (when `result` includes them). */
 export function ResultSheet({ view, answers, result }: { view: ExerciseView; answers: StudentAnswers; result: GradeResult }) {
   const marks = Object.fromEntries(result.parts.map((p) => [p.partId, p.marks]));
-  const hasExpected = result.parts.some((p) => Object.keys(p.expected).length || Object.keys(p.expectedLines).length);
+  const hasExpected = result.parts.some((p) => Object.keys(p.expected).length || Object.keys(p.expectedText ?? {}).length || Object.keys(p.expectedLines).length);
   const expected: Record<string, PartExpected> | undefined = hasExpected
-    ? Object.fromEntries(result.parts.map((p) => [p.partId, { expected: p.expected, expectedLines: p.expectedLines }]))
+    ? Object.fromEntries(result.parts.map((p) => [p.partId, { expected: p.expected, expectedText: p.expectedText, expectedLines: p.expectedLines }]))
     : undefined;
   return (
     <Sheet

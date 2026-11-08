@@ -18,6 +18,7 @@ import { PartBadge } from "@/components/ui/bits";
 
 export type PartExpected = {
   expected: Record<string, number>;
+  expectedText?: Record<string, string>;
   expectedLines: Record<string, { account: string; side: "debit" | "credit"; amount: number }[]>;
 };
 
@@ -105,21 +106,24 @@ function Box({
   mark,
   correct,
   wide,
+  text,
 }: {
   label: string;
   value: string;
   onChange?: (v: string) => void;
   mark?: Mark;
-  correct?: number;
+  correct?: number | string;
   wide?: boolean;
+  text?: boolean;
 }) {
-  const showCorrect = correct !== undefined && mark !== "right" && !(parseAmount(value) === null && Math.abs(correct) < 0.01);
+  const showCorrect = correct !== undefined && mark !== "right" && !(typeof correct === "number" && parseAmount(value) === null && Math.abs(correct) < 0.01);
   return (
     <span className={`box${mark ? ` ${mark}` : ""}${showCorrect && mark === "wrong" ? " struck" : ""}`} style={wide ? { minWidth: 140 } : undefined}>
       <input
         aria-label={label}
         size={6}
-        inputMode="decimal"
+        inputMode={text ? "text" : "decimal"}
+        style={text ? { textAlign: "left", fontFamily: "var(--font)", minWidth: "20ch" } : undefined}
         autoComplete="off"
         value={value}
         readOnly={!onChange}
@@ -130,7 +134,7 @@ function Box({
           {mark === "right" ? "✓" : "×"}
         </span>
       )}
-      {showCorrect && <span className="correct">= {formatAmount(correct!)}</span>}
+      {showCorrect && <span className="correct">= {typeof correct === "string" ? correct : formatAmount(correct!)}</span>}
     </span>
   );
 }
@@ -360,11 +364,12 @@ function NumericSheet({
           </span>
           <Box
             wide
+            text={q.inputKind === "text"}
             label={q.prompt}
             value={value.values?.[q.id] ?? ""}
             onChange={onChange && ((v) => onChange({ values: { ...(value.values ?? {}), [q.id]: v } }))}
             mark={marks?.[q.id]}
-            correct={expected?.expected[q.id]}
+            correct={expected?.expectedText?.[q.id] ?? expected?.expected[q.id]}
           />
         </label>
       ))}

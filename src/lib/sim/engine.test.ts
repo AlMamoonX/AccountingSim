@@ -108,6 +108,14 @@ describe("Karak Corner sample sim", () => {
 });
 
 describe("broken sims are caught", () => {
+  it("accepts an existing month's literal theory answer and grades it with the monthly books", () => {
+    const s = SimSpecSchema.parse({ ...karakSim, monthWork: [{ month: 1, title: "April 2026", parts: [{ id: "Theory", type: "numeric", title: "Assumptions", questions: [{ id: "p1", prompt: "Which assumption separates personal and business spending?", answer: "Business entity assumption" }] }] }] });
+    expect(analyzeSim(s, 1).ok).toBe(true);
+    const ex = monthExercise(s, runCompany(s, [], 1)[0]);
+    const params = Object.fromEntries(ex.params.map((p) => [p.name, p.value]));
+    expect(grade(ex, params, { Theory: { values: { p1: "Business entity assumption" } } })).toMatchObject({ score: 1, max: 1 });
+  });
+
   it("supports long simulations and coursework after month twelve", () => {
     const long = SimSpecSchema.parse({ ...karakSim, months: 36, monthWork: Array.from({ length: 36 }, (_, i) => ({
       month: i + 1, title: `Month ${i + 1} task`, parts: [{ id: "LongWork", type: "numeric", title: "Cash", questions: [{ id: "cashQ", prompt: "Closing cash?", answer: "cash_end" }] }],

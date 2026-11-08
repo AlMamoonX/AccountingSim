@@ -101,6 +101,8 @@ export const NumericPartSchema = z.object({
         id: Id,
         prompt: z.string(),
         answer: Expr,
+        answerKind: z.enum(["number", "text"]).optional(),
+        acceptedAnswers: z.array(z.string().min(1)).optional(),
         tolerance: z.number().min(0).optional(),
         unit: z.string().optional(),
         when: Expr.optional(),

@@ -11,11 +11,45 @@ import {
   defaultParams,
   parseAmount,
   formatAmount,
+  stripExpected,
 } from "./engine";
 import { karakSpec } from "./fixtures/karak";
 
 const spec = ExerciseSpecSchema.parse(karakSpec);
 const calc = (s: string, vars: Record<string, number> = {}) => evaluate(parse(s), (n) => vars[n]);
+
+describe("short accounting theory answers", () => {
+  const theory = (question: object) => ExerciseSpecSchema.parse({
+    ...karakSpec, checks: [], parts: [{ id: "Theory", type: "numeric", title: "Accounting assumptions", questions: [question] }],
+  });
+
+  it("opens and grades the existing Business entity assumption draft without parsing it as a formula", () => {
+    const s = theory({ id: "p1", prompt: "Home remodelling is not recorded in the business books — which assumption?", answer: "Business entity assumption" });
+    const params = defaultParams(s);
+    expect(analyze(s).ok).toBe(true);
+    const view = buildView(s, params);
+    expect(view.parts[0].type === "numeric" && view.parts[0].questions[0].inputKind).toBe("text");
+    expect(JSON.stringify(view)).not.toContain("Business entity assumption");
+    expect(grade(s, params, { Theory: { values: { p1: "  business   entity assumption. " } } })).toMatchObject({ score: 1, max: 1 });
+    expect(grade(s, params, perfectAnswers(s, params))).toMatchObject({ score: 1, max: 1 });
+  });
+
+  it("supports explicit text answers and accepted synonyms while keeping corrections hidden in practice checks", () => {
+    const s = theory({ id: "p1", prompt: "Which assumption?", answerKind: "text", answer: "Business entity assumption", acceptedAnswers: ["Economic entity assumption"] });
+    const params = defaultParams(s);
+    expect(grade(s, params, { Theory: { values: { p1: "Economic entity assumption" } } }).score).toBe(1);
+    const wrong = grade(s, params, { Theory: { values: { p1: "Going concern" } } });
+    expect(wrong).toMatchObject({ score: 0, max: 1 });
+    expect(wrong.parts[0].expectedText).toEqual({ p1: "Business entity assumption" });
+    expect(JSON.stringify(stripExpected(wrong))).not.toContain("Business entity assumption");
+    expect(grade(s, params, {}).progress).toBe(0);
+  });
+
+  it("still rejects malformed numerical formulas instead of treating them as text", () => {
+    expect(analyze(theory({ id: "p1", prompt: "Calculate the cost", answer: "rent wages" })).ok).toBe(false);
+    expect(analyze(theory({ id: "p1", prompt: "Which assumption?", answerKind: "number", answer: "Business entity assumption" })).ok).toBe(false);
+  });
+});
 
 describe("formula language", () => {
   it("does arithmetic with precedence", () => {

@@ -2,11 +2,24 @@
 
 Updated 2026-11-08 by Codex. Repository: https://github.com/AlMamoonX/AccountingSim, branch `main`. Local checkout: `C:\Projects\ACCsim`.
 
+## 2026-11-08: generation latency and theory-answer fix
+
+Owner reported long generation waits and the publish error `Unexpected "entity" in "Business entity assumption"`. Read-only production diagnostics confirmed repeated full rewrites at 8,192, 16,384 and ~20,424 output tokens, followed by the same sequence on repairs. A generation pass took 77–146 seconds before further repairs. The loader's final "Playing it 20 times" stage was a timer, not real server progress.
+
+- AI requests now discover/cache the provider's advertised maximum output allowance and use it on the first attempt, including DeepSeek's legacy `deepseek-chat` alias. Providers without metadata reuse learned budgets across repair calls. DeepSeek requests explicitly disable thinking. Compact generation instructions discourage duplicate monthly worksheets. Full accounting validation remains enabled.
+- Live provider probe accepted the advertised **393,216-token allowance**, returned valid JSON (`finish_reason=stop`, 7 output tokens) in **949 ms**. This verifies the request settings only; it is not a benchmark for generating a complete simulation.
+- Simulation creation now shows an honest elapsed timer and a neutral generation message, with no fabricated completed stages or fixed 30–90-second promise.
+- Short text/theory answers are supported inside question parts using `answerKind: "text"` and optional `acceptedAnswers`. They are graded as normalized exact terms, not by an AI or essay grader. Expected terms remain hidden from student views and practice checks until corrections are released.
+- Existing drafts containing accounting terminology in a formula field are recognized conservatively, including the owner's `Business entity assumption` question. Production JSON diagnostics confirmed the phrase is in a numeric question, not a grid cell. These drafts need no AI rewrite solely to fix that error. Explicit number questions and malformed arithmetic still undergo formula validation.
+- Teacher question editor supports selecting number/formula versus short text; student text fields and corrections use text rendering.
+- `npm test`: **46 passed**. `npm run build`: **passes**, including type validation. No manual browser walkthrough performed, per the owner's earlier instruction.
+- Rollout: pending at this preparation point; record the outcome before handing off.
+
 ## 2026-11-08: remove duration and output limits
 
 Owner requested removal of the simulation duration cap and AI token cutoff. Removed the 12-month ceiling from the creation form, server action, simulation/month-work schemas and AI prompt. The minimum remains two months, and non-integer/invalid durations are rejected rather than silently clamped. A 36-month simulation with 36 distinct coursework plans is covered by an engine regression.
 
-Removed the hard-coded `max_tokens: 8000` from the AI client. Initial requests use the provider default; truncated responses are retried from scratch with a growing budget based on actual completion usage. Partial JSON is never accepted as a finished response. If output stops growing or the provider rejects a larger budget, its model/context limit is reported rather than looping indefinitely. Provider limits still apply; this is not a claim of unlimited model context.
+Removed the hard-coded `max_tokens: 8000` from the AI client. The initial implementation used growing retries; the latency correction above supersedes that strategy with the advertised provider allowance up front. Partial JSON is never accepted as a finished response. Provider limits still apply; this is not a claim of unlimited model context.
 
 `npm test`: **38 passed**. `npm run typecheck`: **passes**. `npm run build`: **passes**. No manual browser walkthrough requested or performed.
 

@@ -279,27 +279,34 @@ export function CountUp({ value, decimals = 0 }: { value: number; decimals?: num
   return <>{shown.toFixed(decimals)}</>;
 }
 
-export function AiWorking({ steps }: { steps: string[] }) {
+export function AiWorking({ steps, message }: { steps: string[]; message?: string }) {
   const [i, setI] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
+    if (message) {
+      const start = Date.now();
+      const t = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+      return () => clearInterval(t);
+    }
     const t = setInterval(() => setI((x) => Math.min(x + 1, steps.length - 1)), 9000);
     return () => clearInterval(t);
-  }, [steps.length]);
+  }, [steps.length, message]);
   return (
     <div className="card hero ai-working" role="status" aria-live="polite">
       <div className="ai-square" aria-hidden />
       <p key={i} className="card-title fade-swap">
-        {steps[i]}
+        {message ?? steps[i]}
       </p>
-      <ol className="steps">
+      {!message && <ol className="steps">
         {steps.map((s, n) => (
           <li key={s} className={n === i ? "on" : n < i ? "done" : ""}>
             {n < i ? "✓ " : ""}
             {s}
           </li>
         ))}
-      </ol>
-      <p className="muted">This usually takes 30–90 seconds. Keep this page open.</p>
+      </ol>}
+      <p className="muted">{message ? "The AI is writing your draft and checking its formulas. Keep this page open." : "This usually takes 30–90 seconds. Keep this page open."}</p>
+      {message && <p className="mono" aria-live="off">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} elapsed</p>}
     </div>
   );
 }
