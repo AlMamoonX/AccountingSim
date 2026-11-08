@@ -10,7 +10,9 @@ Removed the hard-coded `max_tokens: 8000` from the AI client. Initial requests u
 
 `npm test`: **38 passed**. `npm run typecheck`: **passes**. `npm run build`: **passes**. No manual browser walkthrough requested or performed.
 
-Direct SSH is currently refused from the local network (TCP connects then key exchange is refused). Added a manual-only GitHub deployment workflow using the existing authorized VPS identity and pinned known-host entry. It updates only AccountingSim's app, preserves production secrets and data, checks HTTPS and restores the prior app image on failure. Production rollout is pending; record the result here.
+Direct SSH is currently refused from the local network (TCP connects then key exchange is refused). Added a manual-only GitHub deployment workflow using encrypted repository secrets `VPS_SSH_KEY` (the existing owner-authorized VPS identity) and `VPS_KNOWN_HOSTS` (the existing trusted host entry). It updates only AccountingSim's app, preserves production secrets and data, checks HTTPS and restores the prior app image on failure.
+
+**Deployed successfully 2026-11-08 at approximately 11:35 Muscat time.** Application revision/image tag: `c2ce67a99cce3a88d6be001f3114599afc177a77`. GitHub deployment run https://github.com/AlMamoonX/AccountingSim/actions/runs/42459194939 completed **success**, including the VPS rebuild/restart and public HTTPS check. A separate request from the owner's computer to https://accounting.tryzarqa.com/login returned **HTTPS 200**. The main domain now resolves normally here. The screenshot sent while deployment was running showed the old cutoff message; refresh an already-open creation page before retrying to load the new server actions.
 
 ## Current work and owner decisions
 
