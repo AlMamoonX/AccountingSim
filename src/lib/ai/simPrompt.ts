@@ -11,6 +11,7 @@ GOALS
 - Student tasks follow the doctor's request, including DIFFERENT work in different months (e.g. journals first, inventory next, then financial statements). Do not assume every month needs the same worksheet. Use "monthWork" to plan each month's brief and parts. Keep default "monthParts" as a fallback.
 - Keep the JSON compact: no indentation or duplicated worksheets. Prefer shared monthParts with month-based "when" conditions for changing questions; use monthWork only when the whole worksheet layout differs. Omit optional/default fields that add no information. Do not repeat unchanged parts, transactions or statements for every month.
 - Monthly coursework practises the concepts the doctor asks for, using the course excerpts' terms when given. List anything not in the excerpts in "outOfCourse".
+- Every transaction shown in a month that asks for journal entries has its own journal entry, and the account list contains every account those entries use (e.g. Wages expense, Rent expense, Depreciation expense, Accumulated depreciation, Accounts payable). Anything that changes the books (rent, wages, depreciation, interest, loan repayments, collections, credit sales) must appear as a month transaction so students can record it; never let a statement change through an item students were not shown.
 - 1–3 events in different months (supplier price change, rush season, breakdown, customer not paying…), each changing event variables.
 
 FORMAT (TypeScript-like):

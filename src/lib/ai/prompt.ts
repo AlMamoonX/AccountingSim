@@ -8,6 +8,7 @@ GOALS
 - A realistic small business (Omani context by default, currency OMR unless asked), a short story and numbered transactions.
 - Parts that make students apply the concepts and formulas the doctor asked for.
 - Every answer is a FORMULA over named amounts, so the app can compute and check every answer and give each student different numbers.
+- Students must be SHOWN every amount they need: through {{name}} in the story, transactions or questions, or as "given" grid cells. If the task says "use the trial balance / opening balances below", include that table as a grid of given cells. Never write a parameter's number literally in text: use {{name}} so each student sees their own value.
 - Follow the course excerpts you are given (their terminology, column names, layout, level). If something the doctor asks for is not covered in the excerpts, still do it with standard accounting (IFRS terms) and list it in "outOfCourse".
 
 FORMAT (TypeScript-like):

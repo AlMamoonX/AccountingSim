@@ -83,7 +83,9 @@ export function parse(src: string): Node {
   let p = 0;
   const peek = () => toks[p];
   const fail = (msg: string): never => {
-    throw new ExprError(`${msg} in "${src}"`);
+    const open = toks.filter((t) => t.t === "(").length - toks.filter((t) => t.t === ")").length;
+    const hint = open > 0 ? ` (${open} more "(" than ")": close every bracket)` : open < 0 ? ` (${-open} more ")" than "(")` : "";
+    throw new ExprError(`${msg}${hint} in "${src}"`);
   };
 
   function primary(): Node {
