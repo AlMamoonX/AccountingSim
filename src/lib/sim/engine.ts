@@ -1,6 +1,7 @@
 import { parse, evaluate, ExprError, type Node } from "@/lib/spec/expr";
 import { analyze, buildView, type ExerciseView, type Values } from "@/lib/spec/engine";
 import { formatAmount } from "@/lib/spec/format";
+import { explainUnknownNames } from "@/lib/spec/nameHints";
 import type { ExerciseSpec } from "@/lib/spec/schema";
 import type { SimDecision, SimEvent, SimSpec } from "./schema";
 
@@ -367,7 +368,24 @@ export function analyzeSim(spec: SimSpec, samples = 20): SimAnalysis {
     if (errors.length > 12) break;
   }
   const uniq = (xs: string[]) => [...new Set(xs)];
-  return { errors: uniq(errors).slice(0, 20), failed: uniq(failed), ok: errors.length === 0 && failed.length === 0 };
+  return {
+    errors: explainUnknownNames(uniq(errors).slice(0, 20), simNameContext(spec)),
+    failed: uniq(failed),
+    ok: errors.length === 0 && failed.length === 0,
+  };
+}
+
+/** Names a sim formula may use, plus every journal part (for account-id hints). */
+export function simNameContext(spec: SimSpec) {
+  const known = [
+    "month",
+    ...spec.constants.map((c) => c.name),
+    ...spec.decisions.map((d) => d.name),
+    ...spec.eventVars.map((v) => v.name),
+    ...spec.state.flatMap((s) => [s.name, `${s.name}_end`]),
+    ...spec.derived.map((d) => d.name),
+  ];
+  return { known, parts: [...spec.monthParts, ...spec.monthWork.flatMap((w) => w.parts), ...spec.statements] };
 }
 
 function describeDecisions(spec: SimSpec, v: Values) {

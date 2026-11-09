@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ExerciseSpecSchema, type ExerciseSpec } from "@/lib/spec/schema";
 import { analyze } from "@/lib/spec/engine";
+import { explainUnknownNames } from "@/lib/spec/nameHints";
 import { libraryIndex, searchLibrary, type LibraryHit } from "@/lib/library";
 import { env } from "@/lib/env";
 import { chatJSON, type ChatMessage } from "./client";
@@ -117,7 +118,8 @@ export async function runWithRepair<T>(
 
 function exerciseProblems(spec: ExerciseSpec): string[] {
   const a = analyze(spec);
-  return [...a.errors, ...a.checks.filter((c) => !c.ok).map((c) => `Check failed (${c.where}): ${c.label}${c.error ? ` – ${c.error}` : ""}`)];
+  const problems = [...a.errors, ...a.checks.filter((c) => !c.ok).map((c) => `Check failed (${c.where}): ${c.label}${c.error ? ` – ${c.error}` : ""}`)];
+  return explainUnknownNames(problems, { known: spec.params.map((p) => p.name), parts: spec.parts });
 }
 
 export function zodProblems(err: z.ZodError): string[] {

@@ -164,3 +164,44 @@ describe("score calibration of the sample", () => {
     expect(good.raw).toBeGreaterThan(lazy.raw);
   });
 });
+
+describe("unknown names in AI-generated sims", () => {
+  // Reproduces the doctor's report: the AI named the payables journal account "apAcc"
+  // and then used that id as if it were an amount in the balance sheet and the A = L + E check.
+  function withApAccMistake() {
+    const s = structuredClone(karakSim) as unknown as Record<string, unknown> & typeof karakSim;
+    const j = structuredClone(s.monthParts.find((p) => p.id === "J")) as unknown as { accounts: { id: string; label: string }[] };
+    j.accounts.push({ id: "apAcc", label: "Accounts payable" });
+    s.checks![0] = { label: "Assets = Liabilities + Equity", expr: "cash_end + inventory_end + machine_end == apAcc + loan_end + capital_end + re_end" };
+    const bs = structuredClone(s.statements!.find((p) => p.id === "BS")) as unknown as { title: string; rows: { id: string; label: string; kind: string; cells: Record<string, { answer: string }> }[] };
+    bs.title = "Balance Sheet at End of Month 4";
+    bs.rows.splice(4, 0, { id: "l0", label: "Accounts payable", kind: "entry", cells: { amt: { answer: "apAcc" } } });
+    s.monthWork = [{ month: 4, title: "April books", instructions: "Record April and prepare the balance sheet.", parts: [j, bs] }] as unknown as typeof karakSim.monthWork;
+    return SimSpecSchema.parse(s);
+  }
+
+  it("explains that an account id is not an amount and points to real names", () => {
+    const a = analyzeSim(withApAccMistake(), 2);
+    expect(a.ok).toBe(false);
+    const check = a.errors.find((e) => e.startsWith('Check "Assets = Liabilities + Equity"'));
+    expect(check).toContain('Unknown name "apAcc"');
+    expect(check).toContain('journal account "Accounts payable"');
+    expect(check).toContain("have no value");
+    expect(check).toMatch(/_end/);
+    const books = a.errors.find((e) => e.includes("books") && e.includes("apAcc"));
+    expect(books).toContain('journal account "Accounts payable"');
+  });
+
+  it("suggests the closest defined name for a typo", () => {
+    const s = structuredClone(karakSim) as typeof karakSim;
+    s.checks![0] = { label: "Assets = Liabilities + Equity", expr: "cahs_end + inventory_end + machine_end == loan_end + capital_end + re_end" };
+    const a = analyzeSim(SimSpecSchema.parse(s), 1);
+    const msg = a.errors.find((e) => e.includes('"cahs_end"'));
+    expect(msg).toContain("is not defined");
+    expect(msg).toMatch(/Closest existing names: cash_end/);
+  });
+
+  it("leaves a valid sim's analysis untouched", () => {
+    expect(analyzeSim(spec, 3).errors).toEqual([]);
+  });
+});
