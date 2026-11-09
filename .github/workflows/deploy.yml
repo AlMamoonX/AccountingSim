@@ -8,6 +8,10 @@ on:
         type: choice
         options: [deploy, diagnose]
         default: deploy
+      add_teacher:
+        description: Optional doctor email to add to the server's TEACHER_EMAILS before deploying
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -56,15 +60,34 @@ jobs:
           REMOTE
       - name: Upload and deploy only AccountingSim
         if: inputs.operation != 'diagnose'
+        env:
+          ADD_TEACHER: ${{ inputs.add_teacher }}
         run: |
           set -euo pipefail
           git archive --format=tar.gz HEAD > accounting-source.tar.gz
           scp -i ~/.ssh/id_accounting -o BatchMode=yes -o StrictHostKeyChecking=yes accounting-source.tar.gz "deploy@173.249.40.122:accountingsim-source-${GITHUB_SHA}.tar.gz"
-          ssh -i ~/.ssh/id_accounting -o BatchMode=yes -o StrictHostKeyChecking=yes deploy@173.249.40.122 bash -s -- "$GITHUB_SHA" <<'REMOTE'
+          ssh -i ~/.ssh/id_accounting -o BatchMode=yes -o StrictHostKeyChecking=yes deploy@173.249.40.122 bash -s -- "$GITHUB_SHA" "$ADD_TEACHER" <<'REMOTE'
           set -euo pipefail
           revision="$1"
+          add_teacher=$(printf '%s' "${2:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
           cd /home/deploy/accountingsim
           test -s .env
+          if [ -n "$add_teacher" ]; then
+            if ! printf '%s' "$add_teacher" | grep -Eq '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$'; then
+              echo "add_teacher is not a valid email" >&2
+              exit 1
+            fi
+            current=$(grep '^TEACHER_EMAILS=' .env | tail -1 | cut -d= -f2- || true)
+            if printf ',%s,' "$current" | tr '[:upper:]' '[:lower:]' | tr ' ;' ',,' | grep -qF ",$add_teacher,"; then
+              echo "Doctor email already present in TEACHER_EMAILS."
+            else
+              cp .env .env.bak
+              grep -v '^TEACHER_EMAILS=' .env.bak > .env || true
+              printf 'TEACHER_EMAILS=%s\n' "${current:+$current,}$add_teacher" >> .env
+              chmod 600 .env
+              echo "Doctor email added to TEACHER_EMAILS."
+            fi
+          fi
           previous_image=$(docker inspect accounting-sim-app-1 --format '{{.Config.Image}}')
           tar -xzf "/home/deploy/accountingsim-source-${revision}.tar.gz" -C .
           export IMAGE_TAG="$revision"
