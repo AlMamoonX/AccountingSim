@@ -205,3 +205,24 @@ describe("unknown names in AI-generated sims", () => {
     expect(analyzeSim(spec, 3).errors).toEqual([]);
   });
 });
+
+describe("failed checks explain themselves with numbers", () => {
+  it("shows both sides, the gap and each amount for an unbalanced A = L + E", () => {
+    const s = structuredClone(karakSim) as typeof karakSim;
+    // Retained earnings left out: the same kind of imbalance the AI produced on the live site.
+    s.checks![0] = { label: "Assets = Liabilities + Equity", expr: "cash_end + inventory_end + machine_end == loan_end + capital_end" };
+    const a = analyzeSim(SimSpecSchema.parse(s), 1);
+    const msg = a.failed.find((f) => f.startsWith("Assets = Liabilities + Equity – fails in January (default"));
+    expect(msg).toBeDefined();
+    expect(msg).toMatch(/left side [\d,.-]+ == right side [\d,.-]+ is false \(difference [\d,.-]+\)/);
+    expect(msg).toMatch(/values: .*cash_end=[\d,.-]+.*capital_end=[\d,.-]+/);
+  });
+
+  it("points at the false clause of an && check", () => {
+    const s = structuredClone(karakSim) as typeof karakSim;
+    s.checks![1] = { label: "Stock never goes below zero", expr: "stockUnits_end >= 0 && inventory_end < -1" };
+    const msg = analyzeSim(SimSpecSchema.parse(s), 1).failed.find((f) => f.startsWith("Stock never goes below zero"));
+    expect(msg).toContain("values: inventory_end=");
+    expect(msg).not.toContain("stockUnits_end=");
+  });
+});

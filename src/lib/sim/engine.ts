@@ -1,4 +1,4 @@
-import { parse, evaluate, ExprError, type Node } from "@/lib/spec/expr";
+import { parse, evaluate, names, ExprError, type Node } from "@/lib/spec/expr";
 import { analyze, buildView, type ExerciseView, type Values } from "@/lib/spec/engine";
 import { formatAmount } from "@/lib/spec/format";
 import { explainUnknownNames } from "@/lib/spec/nameHints";
@@ -341,7 +341,7 @@ export function analyzeSim(spec: SimSpec, samples = 20): SimAnalysis {
           errors.push(`Check "${c.label}": ${(e as Error).message}`);
           continue;
         }
-        if (!ok && failed.length < 8) failed.push(`${c.label} – fails in ${r.label} (${play.name}: ${describeDecisions(spec, r.decisions)})`);
+        if (!ok && failed.length < 8) failed.push(`${c.label} – fails in ${r.label} (${play.name}: ${describeDecisions(spec, r.decisions)})${explainFailedCheck(scope, c.expr)}`);
       }
       {
         const a = analyze(monthExercise(spec, r));
@@ -386,6 +386,39 @@ export function simNameContext(spec: SimSpec) {
     ...spec.derived.map((d) => d.name),
   ];
   return { known, parts: [...spec.monthParts, ...spec.monthWork.flatMap((w) => w.parts), ...spec.statements] };
+}
+
+const COMPARE = new Set(["==", "!=", "<", "<=", ">", ">="]);
+
+/**
+ * Says WHY a check failed, with numbers: both sides of the failing comparison, the gap, and every
+ * amount it uses. Without this the AI repair loop (and the doctor) only learn "fails in January".
+ */
+export function explainFailedCheck(scope: { calc(src: string): number; value(name: string): number }, expr: string): string {
+  let node: Node;
+  try {
+    node = parse(expr);
+  } catch {
+    return "";
+  }
+  const read = (n: Node) => evaluate(n, (x) => scope.value(x));
+  // Inside && find the clause that is false; inside || every clause is false, so explain the first.
+  while (node.k === "bin" && (node.op === "&&" || node.op === "||")) {
+    node = node.op === "&&" && read(node.a) !== 0 ? node.b : node.a;
+  }
+  const parts: string[] = [];
+  try {
+    if (node.k === "bin" && COMPARE.has(node.op)) {
+      const a = read(node.a);
+      const b = read(node.b);
+      parts.push(`left side ${formatAmount(a)} ${node.op} right side ${formatAmount(b)} is false (difference ${formatAmount(a - b)})`);
+    }
+    const used = [...names(node)].slice(0, 16).map((n) => `${n}=${formatAmount(scope.value(n))}`);
+    if (used.length) parts.push(`values: ${used.join(", ")}`);
+  } catch {
+    return "";
+  }
+  return parts.length ? ` – ${parts.join("; ")}` : "";
 }
 
 function describeDecisions(spec: SimSpec, v: Values) {
