@@ -45,6 +45,18 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/id_accounting -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 deploy@173.249.40.122 bash -s <<'REMOTE'
           set -euo pipefail
+          echo '--- sign-in allowlist (.env line, then what the app container sees) ---'
+          grep -n '^TEACHER_EMAILS=' /home/deploy/accountingsim/.env | cat -A || echo 'no TEACHER_EMAILS line in .env'
+          docker exec accounting-sim-app-1 sh -c 'printf "%s" "${TEACHER_EMAILS-<unset>}"' | cat -A; echo
+          docker exec -i accounting-sim-app-1 node -e 'const l=(process.env.TEACHER_EMAILS||"").split(/[,;\s]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);console.log(JSON.stringify({parsed:l,dark99mam:l.includes("dark99mam@gmail.com"),rawahi:l.includes("rawahi.s96@gmail.com")}))'
+          echo '--- recent sign-in codes and users for doctor emails ---'
+          docker exec -i accounting-sim-db-1 psql -U accsim -d accsim <<'SQL'
+          SELECT email, created_at, expires_at, attempts, used_at FROM otp_codes
+          WHERE email IN ('dark99mam@gmail.com','rawahi.s96@gmail.com') ORDER BY created_at DESC LIMIT 10;
+          SELECT email, role, created_at FROM users WHERE email IN ('dark99mam@gmail.com','rawahi.s96@gmail.com');
+          SQL
+          echo '--- recent app log lines about auth/mail ---'
+          docker logs --since 3h accounting-sim-app-1 2>&1 | grep -iE 'mail|resend|login|auth|error' | tail -30 || true
           docker exec -i accounting-sim-db-1 psql -U accsim -d accsim <<'SQL'
           SELECT created_at, kind, model, ok, prompt_tokens, completion_tokens, ms, left(error, 250) AS error
           FROM ai_logs ORDER BY id DESC LIMIT 12;
