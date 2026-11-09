@@ -18,7 +18,7 @@ export const env = {
   },
   get teacherEmails() {
     return list(
-      process.env.TEACHER_EMAILS ?? "aliya.albalushi@gutech.edu.om,asnssrr@gmail.com,dark99mam@gmail.com,rawahi.s96@gmail.com",
+      process.env.TEACHER_EMAILS?.trim() || "aliya.albalushi@gutech.edu.om,asnssrr@gmail.com,dark99mam@gmail.com,rawahi.s96@gmail.com",
     );
   },
   get studentDomain() {

@@ -23,7 +23,7 @@ settings = {
     'DOMAIN': 'accounting.tryzarqa.com',
     'SESSION_SECRET': secrets.token_hex(32),
     'POSTGRES_PASSWORD': secrets.token_hex(32),
-    'TEACHER_EMAILS': 'aliya.albalushi@gutech.edu.om,asnssrr@gmail.com,dark99mam@gmail.com',
+    'TEACHER_EMAILS': 'aliya.albalushi@gutech.edu.om,asnssrr@gmail.com,dark99mam@gmail.com,rawahi.s96@gmail.com',
     'STUDENT_EMAIL_DOMAIN': 'student.gutech.edu.om',
     'DEEPSEEK_API_KEY': deepseek,
     'DEEPSEEK_MODEL': drivealt.get('DeepSeek__Model') or 'deepseek-chat',
