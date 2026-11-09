@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 /** Submit button that shows a busy label while its form's server action runs. */
@@ -67,6 +67,15 @@ export function ConfirmButton({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [alignLeft, setAlignLeft] = useState(false);
+  // The card opens leftwards from the button's right edge; for buttons near the left of the screen
+  // that pushes it off-screen, so open it rightwards instead.
+  useLayoutEffect(() => {
+    if (!open) return setAlignLeft(false);
+    const r = popRef.current?.getBoundingClientRect();
+    if (r && r.left < 8) setAlignLeft(true);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
@@ -85,7 +94,7 @@ export function ConfirmButton({
         {label}
       </button>
       {open && (
-        <div className="popover" role="dialog" aria-label="Confirm">
+        <div className={alignLeft ? "popover popover-left" : "popover"} role="dialog" aria-label="Confirm" ref={popRef}>
           <div className="stack-sm">
             <div style={{ fontWeight: 700 }}>{question}</div>
             <div className="row">
